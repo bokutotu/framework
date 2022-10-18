@@ -43,7 +43,7 @@ impl Shape {
         });
     }
 
-    fn iter(&self) -> ShpaeIter {
+    fn iter(&self) -> ShapeIter {
         ShapeIter::new(self.clone())
     }
 }
@@ -54,9 +54,9 @@ pub struct ShapeIter {
 }
 
 impl ShapeIter {
-    fn new(shape: Shpae) -> Self {
+    fn new(shape: Shape) -> Self {
         let shape_len = shape.0.len();
-        let index_vec = Vec::with_capacity(shape_len);
+        let mut index_vec = Vec::with_capacity(shape_len);
         for _ in 0..shape_len {
             index_vec.push(0);
         }
