@@ -2,18 +2,18 @@ use std::clone::Clone;
 use std::iter::Iterator;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Shape ( Vec::<isize> );
+pub struct Shape(Vec<isize>);
 
 impl Shape {
     fn new(vec: Vec<isize>) -> Self {
-        Shape ( vec )
+        Shape(vec)
     }
 
     fn default_stride(&self) -> Stride {
         let mut res = vec![1];
         let mut shape = self.0.clone();
         shape.reverse();
-        for i in 0..shape.len()-1 {
+        for i in 0..shape.len() - 1 {
             res.push(res[i] * shape[i]);
         }
         res.reverse();
@@ -30,16 +30,17 @@ impl Shape {
 
     fn valid_index(&self, index: &TensorIndex) {
         if self.0.len() != index.0.len() {
-            panic!("This tensor is {} dimensions but your index is {} dimensions", 
-                   self.0.len(), index.0.len());
+            panic!(
+                "This tensor is {} dimensions but your index is {} dimensions",
+                self.0.len(),
+                index.0.len()
+            );
         }
-        index.0.iter().zip(self.0.iter())
-            .for_each(|(idx, shape)| { 
-                if idx >= shape {
-                    panic!("this tensor's shape is {} but your index is {}",
-                           idx, shape)
-                }
-            });
+        index.0.iter().zip(self.0.iter()).for_each(|(idx, shape)| {
+            if idx >= shape {
+                panic!("this tensor's shape is {} but your index is {}", idx, shape)
+            }
+        });
     }
 
     fn iter(&self) -> ShpaeIter {
@@ -49,7 +50,7 @@ impl Shape {
 
 pub struct ShapeIter {
     shape: Shape,
-    index: TensorIndex
+    index: TensorIndex,
 }
 
 impl ShapeIter {
@@ -67,27 +68,30 @@ impl ShapeIter {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Stride ( Vec::<isize> );
+pub struct Stride(Vec<isize>);
 
 impl Stride {
     fn new(vec: Vec<isize>) -> Self {
-        Stride ( vec )
+        Stride(vec)
     }
 
     // must use before valid_index
     fn cal_offset(&self, index: &TensorIndex) -> isize {
-        self.0.iter()
+        self.0
+            .iter()
             .zip(index.0.iter())
-            .fold(0, |offset, (dim_index, dim_stride)| offset + dim_index * dim_stride)
+            .fold(0, |offset, (dim_index, dim_stride)| {
+                offset + dim_index * dim_stride
+            })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TensorIndex ( Vec<isize> );
+pub struct TensorIndex(Vec<isize>);
 
 impl TensorIndex {
     fn new(index: Vec<isize>) -> Self {
-        Self ( index )
+        Self(index)
     }
 }
 
@@ -95,15 +99,19 @@ pub(crate) struct OwnedInner<T> {
     pointer: *mut T,
     shape: Shape,
     stride: Stride,
-    num_elm: usize
+    num_elm: usize,
 }
 
 impl<T: Copy + Clone> OwnedInner<T> {
     fn new(pointer: *mut T, shape: Shape, stride: Stride) -> Self {
         let num_elm = shape.num_elms();
-        Self { pointer, shape, stride, num_elm  }
+        Self {
+            pointer,
+            shape,
+            stride,
+            num_elm,
+        }
     }
-
 
     fn shape(&self) -> Shape {
         self.shape.clone()
@@ -114,8 +122,8 @@ impl<T: Copy + Clone> OwnedInner<T> {
     }
 }
 
-pub(crate) struct CpuInner<T> ( OwnedInner<T> );
-pub(crate) struct GpuInner<T> ( OwnedInner<T> );
+pub(crate) struct CpuInner<T>(OwnedInner<T>);
+pub(crate) struct GpuInner<T>(OwnedInner<T>);
 
 impl<T: Copy + Clone> CpuInner<T> {
     fn shape(&self) -> Shape {
@@ -126,8 +134,8 @@ impl<T: Copy + Clone> CpuInner<T> {
         self.0.stride()
     }
 
-    fn cpu_malloc(shape: Shape, stride: Stride) -> Self{
-        let alloc_vec: Vec::<T> = Vec::with_capacity(shape.num_elms());
+    fn cpu_malloc(shape: Shape, stride: Stride) -> Self {
+        let alloc_vec: Vec<T> = Vec::with_capacity(shape.num_elms());
         let pointer: *mut T = alloc_vec.as_ptr() as *mut T;
         std::mem::forget(alloc_vec);
         CpuInner(OwnedInner::new(pointer, shape, stride))
@@ -161,15 +169,13 @@ impl<T: Copy + Clone> CpuInner<T> {
     }
 
     fn into_vec(self) -> Vec<T> {
-        unsafe {
-            Vec::from_raw_parts(self.0.pointer, self.0.num_elm, self.0.num_elm)
-        }
+        unsafe { Vec::from_raw_parts(self.0.pointer, self.0.num_elm, self.0.num_elm) }
     }
 
     fn from_vec(vec: Vec<T>, shape: Shape) -> Self {
         let stride = shape.default_stride();
         let inner = OwnedInner::new(vec.as_ptr() as *mut T, shape, stride);
-        Self ( inner )
+        Self(inner)
     }
 }
 
@@ -177,7 +183,7 @@ impl<T: Copy + Clone> Clone for CpuInner<T> {
     fn clone(&self) -> Self {
         let pointer: *mut T = self.to_vec().as_mut_ptr();
         let inner = OwnedInner::new(pointer, self.shape(), self.stride());
-        Self (inner)
+        Self(inner)
     }
 }
 
@@ -218,7 +224,7 @@ impl<T: Copy + Clone> Pointer<T> {
     fn stride(&self) -> Stride {
         match self {
             Pointer::Gpu(inner) => inner.0.stride(),
-            Pointer::Cpu(inner) => inner.0.stride()
+            Pointer::Cpu(inner) => inner.0.stride(),
         }
     }
 
@@ -226,7 +232,7 @@ impl<T: Copy + Clone> Pointer<T> {
         let pointer = CpuInner::cpu_malloc(shape, stride);
         Pointer::Cpu(pointer)
     }
-    
+
     fn gpu_malloc(shape: Shape, stride: Stride) -> Self {
         let pointer = GpuInner::gpu_malloc(shape, stride);
         Pointer::Gpu(pointer)
@@ -243,11 +249,11 @@ impl<T: Copy + Clone> Pointer<T> {
 }
 
 pub struct Tensor<T> {
-    inner: Pointer<T>
+    inner: Pointer<T>,
 }
 
 impl<T: Copy + Clone> Tensor<T> {
-    pub fn shape(&self) -> Shape{
+    pub fn shape(&self) -> Shape {
         self.inner.shape()
     }
 
@@ -283,7 +289,7 @@ macro_rules! impl_defalut_stride_test {
 
 impl_defalut_stride_test!(test_default_stride_1d, vec![10], vec![1]);
 impl_defalut_stride_test!(test_default_stride_2d, vec![2, 3], vec![3, 1]);
-impl_defalut_stride_test!(test_default_stride_3d, vec![2,3,4], vec![12, 4, 1]);
+impl_defalut_stride_test!(test_default_stride_3d, vec![2, 3, 4], vec![12, 4, 1]);
 
 macro_rules! impl_is_default_stride_test {
     (@inner $shape:ident, $stride:ident, $shape_vec:expr, $stride_vec:expr) => {
@@ -292,7 +298,7 @@ macro_rules! impl_is_default_stride_test {
     };
 
     (@eq $fn_name:ident, $shape_vec:expr, $stride_vec:expr) => {
-        #[test] 
+        #[test]
         fn $fn_name() {
             impl_is_default_stride_test!(@inner shape, stride, $shape_vec, $stride_vec);
             assert!(shape.is_default_stride(&stride));
@@ -367,6 +373,6 @@ macro_rules! impl_cal_offset {
 }
 
 impl_cal_offset!(cal_offset_1d, vec![1], vec![3], 3);
-impl_cal_offset!(cal_offset_2d, vec![4, 1], vec![2 ,3], 11);
-impl_cal_offset!(cal_offset_3d, vec![12, 4, 1], vec![2, 2 ,3], 35);
-impl_cal_offset!(cal_offset_4d, vec![24, 12, 4, 1], vec![2, 2, 2 ,3], 83);
+impl_cal_offset!(cal_offset_2d, vec![4, 1], vec![2, 3], 11);
+impl_cal_offset!(cal_offset_3d, vec![12, 4, 1], vec![2, 2, 3], 35);
+impl_cal_offset!(cal_offset_4d, vec![24, 12, 4, 1], vec![2, 2, 2, 3], 83);
