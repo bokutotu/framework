@@ -1,5 +1,6 @@
 use std::clone::Clone;
 use std::iter::Iterator;
+use std::ops::Index;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Shape(Vec<isize>);
@@ -43,27 +44,44 @@ impl Shape {
         });
     }
 
-    fn iter(&self) -> ShapeIter {
+    fn to_iter(&self) -> ShapeIter {
         ShapeIter::new(self.clone())
     }
 }
 
 pub struct ShapeIter {
     shape: Shape,
-    index: TensorIndex,
+    default_stride: Stride,
+    index: usize,
 }
 
 impl ShapeIter {
     fn new(shape: Shape) -> Self {
-        let shape_len = shape.0.len();
-        let mut index_vec = Vec::with_capacity(shape_len);
-        for _ in 0..shape_len {
-            index_vec.push(0);
+        let index = 0;
+        let default_stride = shape.default_stride();
+        Self {
+            shape,
+            default_stride,
+            index,
         }
+    }
+}
 
-        let index = TensorIndex::new(index_vec);
-
-        Self { shape, index }
+impl Iterator for ShapeIter {
+    type Item = TensorIndex;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.shape.num_elms() {
+            return None;
+        }
+        let mut _index = self.index as isize;
+        let mut index_vec = Vec::new();
+        for stride in self.default_stride.0.iter() {
+            index_vec.push(_index % stride);
+            _index /= stride;
+        }
+        index_vec.reverse();
+        self.index += 1;
+        Some(TensorIndex::new(index_vec))
     }
 }
 
@@ -134,6 +152,10 @@ impl<T: Copy + Clone> CpuInner<T> {
         self.0.stride()
     }
 
+    fn is_default_stride(&self) -> bool {
+        self.shape().is_default_stride(&self.stride())
+    }
+
     fn cpu_malloc(shape: Shape, stride: Stride) -> Self {
         let alloc_vec: Vec<T> = Vec::with_capacity(shape.num_elms());
         let pointer: *mut T = alloc_vec.as_ptr() as *mut T;
@@ -196,6 +218,10 @@ impl<T> GpuInner<T> {
         self.0.stride.clone()
     }
 
+    fn is_default_stride(&self) -> bool {
+        self.shape().is_default_stride(&self.stride())
+    }
+
     fn gpu_malloc(shape: Shape, stride: Stride) -> Self {
         let _shape = shape;
         let _stride = stride;
@@ -205,6 +231,26 @@ impl<T> GpuInner<T> {
     fn cal_offset(self, index: TensorIndex) -> isize {
         self.shape().valid_index(&index);
         self.stride().cal_offset(&index)
+    }
+
+    // GPUのポインタをそのまま返すわけには行かないので対策を後で考える
+    pub unsafe fn access_by_idx(&self, index: &TensorIndex) -> *mut T {
+        let _index = index;
+        todo!();
+    }
+
+    fn to_vec(&self) -> Vec<T> {
+        todo!();
+    }
+
+    fn into_vec(self) -> Vec<T> {
+        todo!();
+    }
+
+    fn from_vec(vec: Vec<T>, shape: Shape) -> Self {
+        let _vec = vec;
+        let _shape = shape;
+        todo!();
     }
 }
 
@@ -216,15 +262,22 @@ pub(crate) enum Pointer<T> {
 impl<T: Copy + Clone> Pointer<T> {
     fn shape(&self) -> Shape {
         match self {
-            Pointer::Gpu(inner) => inner.0.shape(),
-            Pointer::Cpu(inner) => inner.0.shape(),
+            Pointer::Gpu(inner) => inner.shape(),
+            Pointer::Cpu(inner) => inner.shape(),
+        }
+    }
+
+    fn is_default_stride(&self) -> bool {
+        match self {
+            Pointer::Gpu(inner) => inner.is_default_stride(),
+            Pointer::Cpu(inner) => inner.is_default_stride(),
         }
     }
 
     fn stride(&self) -> Stride {
         match self {
-            Pointer::Gpu(inner) => inner.0.stride(),
-            Pointer::Cpu(inner) => inner.0.stride(),
+            Pointer::Gpu(inner) => inner.stride(),
+            Pointer::Cpu(inner) => inner.stride(),
         }
     }
 
@@ -238,13 +291,37 @@ impl<T: Copy + Clone> Pointer<T> {
         Pointer::Gpu(pointer)
     }
 
-    fn cal_offset(self, index: TensorIndex) -> isize {
-        self.shape().valid_index(&index);
-        self.stride().cal_offset(&index)
+    // fn cal_offset(self, index: TensorIndex) -> isize {
+    //     self.shape().valid_index(&index);
+    //     self.stride().cal_offset(&index)
+    // }
+
+    fn to_vec(&self) -> Vec<T> {
+        match self {
+            Pointer::Gpu(inner) => inner.to_vec(),
+            Pointer::Cpu(inner) => inner.to_vec(),
+        }
     }
 
-    fn is_default_stride(&self) -> bool {
-        self.shape().default_stride() == self.stride()
+    fn into_vec(self) -> Vec<T> {
+        match self {
+            Pointer::Cpu(inner) => inner.into_vec(),
+            Pointer::Gpu(inner) => inner.into_vec(),
+        }
+    }
+
+    fn from_vec(vec: Vec<T>, shape: Shape, is_gpu: bool) -> Self {
+        if is_gpu {
+            return Pointer::Gpu(GpuInner::from_vec(vec, shape));
+        }
+        Pointer::Cpu(CpuInner::from_vec(vec, shape))
+    }
+
+    unsafe fn access_by_index(&self, index: &TensorIndex) -> *mut T {
+        match self {
+            Pointer::Cpu(inner) => inner.access_by_idx(index),
+            Pointer::Gpu(inner) => inner.access_by_idx(index),
+        }
     }
 }
 
@@ -273,6 +350,36 @@ impl<T: Copy + Clone> Tensor<T> {
         let stride = shape.default_stride();
         let pointer = Pointer::gpu_malloc(shape, stride);
         Tensor { inner: pointer }
+    }
+
+    pub fn to_vec(&self) -> Vec<T> {
+        self.inner.to_vec()
+    }
+
+    pub fn into_vec(self) -> Vec<T> {
+        self.inner.into_vec()
+    }
+
+    pub fn from_vec(vec: Vec<T>, shape: Shape, is_gpu: bool) -> Self {
+        Self {
+            inner: Pointer::from_vec(vec, shape, is_gpu),
+        }
+    }
+
+    unsafe fn access_by_index(&self, index: &TensorIndex) -> *mut T {
+        self.inner.access_by_index(index)
+    }
+
+    fn is_default_stride(&self) -> bool {
+        self.inner.is_default_stride()
+    }
+}
+
+impl<T: Copy + Clone> Index<TensorIndex> for Tensor<T> {
+    type Output = T;
+
+    fn index(&self, index: TensorIndex) -> &Self::Output {
+        unsafe { &*self.access_by_index(&index) }
     }
 }
 
