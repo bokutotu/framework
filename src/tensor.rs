@@ -1,6 +1,8 @@
 use std::clone::Clone;
 use std::iter::Iterator;
 use std::ops::Index;
+use std::ops::Drop;
+use std::fmt::Debug;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Shape(Vec<isize>);
@@ -44,24 +46,25 @@ impl Shape {
         });
     }
 
-    fn to_iter(&self) -> ShapeIter {
+    fn iter(&self) -> ShapeIter {
         ShapeIter::new(self.clone())
     }
 }
 
 pub struct ShapeIter {
     shape: Shape,
-    default_stride: Stride,
+    reference_vec: Vec<isize>,
     index: usize,
 }
 
 impl ShapeIter {
     fn new(shape: Shape) -> Self {
         let index = 0;
-        let default_stride = shape.default_stride();
+        let default_stride_vec = shape.default_stride().0;
+        let reference_vec = default_stride_vec[0..default_stride_vec.len() - 1].to_vec();
         Self {
             shape,
-            default_stride,
+            reference_vec,
             index,
         }
     }
@@ -75,11 +78,11 @@ impl Iterator for ShapeIter {
         }
         let mut _index = self.index as isize;
         let mut index_vec = Vec::new();
-        for stride in self.default_stride.0.iter() {
-            index_vec.push(_index % stride);
-            _index /= stride;
+        for stride in self.reference_vec.iter() {
+            index_vec.push(_index / stride);
+            _index %= stride;
         }
-        index_vec.reverse();
+        index_vec.push(_index);
         self.index += 1;
         Some(TensorIndex::new(index_vec))
     }
@@ -143,6 +146,33 @@ impl<T: Copy + Clone> OwnedInner<T> {
 pub(crate) struct CpuInner<T>(OwnedInner<T>);
 pub(crate) struct GpuInner<T>(OwnedInner<T>);
 
+impl<T: Copy + Clone> Clone for CpuInner<T> {
+    fn clone(&self) -> Self {
+        let cloned = CpuInner::cpu_malloc(self.shape(), self.shape().default_stride());
+        for index in self.shape().iter() {
+            unsafe {
+                let cloned_ptr: *mut T = cloned.access_by_idx(&index);
+                let self_ptr: *mut T = self.access_by_idx(&index);
+                cloned_ptr.write(*self_ptr);
+            }
+        }
+        cloned
+    }
+}
+
+impl<T: Copy + Clone> Clone for GpuInner<T> {
+    fn clone(&self) -> Self {
+        todo!()
+    }
+}
+
+impl<T> Drop for CpuInner<T> {
+    fn drop(&mut self) {
+        let vec = unsafe { Vec::from_raw_parts(self.0.pointer, self.0.num_elm, self.0.num_elm) };
+        drop(vec);
+    }
+}
+
 impl<T: Copy + Clone> CpuInner<T> {
     fn shape(&self) -> Shape {
         self.0.shape()
@@ -168,43 +198,28 @@ impl<T: Copy + Clone> CpuInner<T> {
         self.stride().cal_offset(index)
     }
 
-    pub unsafe fn access_by_offset(&self, offset: isize) -> *mut T {
+    unsafe fn access_by_offset(&self, offset: isize) -> *mut T {
         self.0.pointer.offset(offset) as *mut T
     }
 
-    pub unsafe fn access_by_idx(&self, index: &TensorIndex) -> *mut T {
+    unsafe fn access_by_idx(&self, index: &TensorIndex) -> *mut T {
         let offset = self.cal_offset(index);
         self.access_by_offset(offset)
     }
 
     fn to_vec(&self) -> Vec<T> {
-        let inner = CpuInner::cpu_malloc(self.shape(), self.stride());
-        for i in 0..self.0.num_elm {
-            let offset = i.try_into().unwrap();
-            unsafe {
-                let inner_ptr = inner.access_by_offset(offset);
-                let self_ptr = self.access_by_offset(offset);
-                *inner_ptr = *self_ptr;
-            }
-        }
-        inner.to_vec()
-    }
-
-    fn into_vec(self) -> Vec<T> {
-        unsafe { Vec::from_raw_parts(self.0.pointer, self.0.num_elm, self.0.num_elm) }
+        let cloned = self.clone();
+        let vec = unsafe { 
+            Vec::from_raw_parts(cloned.0.pointer, cloned.0.num_elm, cloned.0.num_elm) 
+        };
+        std::mem::forget(cloned);
+        vec
     }
 
     fn from_vec(vec: Vec<T>, shape: Shape) -> Self {
         let stride = shape.default_stride();
         let inner = OwnedInner::new(vec.as_ptr() as *mut T, shape, stride);
-        Self(inner)
-    }
-}
-
-impl<T: Copy + Clone> Clone for CpuInner<T> {
-    fn clone(&self) -> Self {
-        let pointer: *mut T = self.to_vec().as_mut_ptr();
-        let inner = OwnedInner::new(pointer, self.shape(), self.stride());
+        std::mem::forget(vec);
         Self(inner)
     }
 }
@@ -250,6 +265,12 @@ impl<T> GpuInner<T> {
     fn from_vec(vec: Vec<T>, shape: Shape) -> Self {
         let _vec = vec;
         let _shape = shape;
+        todo!();
+    }
+}
+
+impl<T> Drop for GpuInner<T> {
+    fn drop(&mut self) {
         todo!();
     }
 }
@@ -303,13 +324,6 @@ impl<T: Copy + Clone> Pointer<T> {
         }
     }
 
-    fn into_vec(self) -> Vec<T> {
-        match self {
-            Pointer::Cpu(inner) => inner.into_vec(),
-            Pointer::Gpu(inner) => inner.into_vec(),
-        }
-    }
-
     fn from_vec(vec: Vec<T>, shape: Shape, is_gpu: bool) -> Self {
         if is_gpu {
             return Pointer::Gpu(GpuInner::from_vec(vec, shape));
@@ -322,6 +336,16 @@ impl<T: Copy + Clone> Pointer<T> {
             Pointer::Cpu(inner) => inner.access_by_idx(index),
             Pointer::Gpu(inner) => inner.access_by_idx(index),
         }
+    }
+}
+
+impl<T> Drop for Pointer<T> {
+    fn drop(&mut self) {
+        match self {
+            Pointer::Gpu(inner) => drop(inner),
+            Pointer::Cpu(inner) => drop(inner),
+        };
+        
     }
 }
 
@@ -357,10 +381,13 @@ impl<T: Copy + Clone> Tensor<T> {
     }
 
     pub fn into_vec(self) -> Vec<T> {
-        self.inner.into_vec()
+        self.to_vec()
     }
 
     pub fn from_vec(vec: Vec<T>, shape: Shape, is_gpu: bool) -> Self {
+        if vec.len() != shape.num_elms() {
+            panic!("length of vectoro and shape is not collect");
+        }
         Self {
             inner: Pointer::from_vec(vec, shape, is_gpu),
         }
@@ -373,7 +400,20 @@ impl<T: Copy + Clone> Tensor<T> {
     fn is_default_stride(&self) -> bool {
         self.inner.is_default_stride()
     }
+
+    unsafe fn as_mut_ptr(&self) -> *mut T {
+        match self.inner {
+            Pointer::Cpu(ref inner) => inner.0.pointer,
+            Pointer::Gpu(ref inner) => inner.0.pointer,
+        }
+    }
 }
+
+// impl<T> Drop for Tensor<T> {
+//     fn drop(&mut self) {
+//         drop(self.inner);
+//     }
+// }
 
 impl<T: Copy + Clone> Index<TensorIndex> for Tensor<T> {
     type Output = T;
@@ -483,3 +523,44 @@ impl_cal_offset!(cal_offset_1d, vec![1], vec![3], 3);
 impl_cal_offset!(cal_offset_2d, vec![4, 1], vec![2, 3], 11);
 impl_cal_offset!(cal_offset_3d, vec![12, 4, 1], vec![2, 2, 3], 35);
 impl_cal_offset!(cal_offset_4d, vec![24, 12, 4, 1], vec![2, 2, 2, 3], 83);
+
+macro_rules! impl_shape_iter_test {
+    ($fn_name:ident, $shape:expr, $($index:expr),*) => {
+        #[test]
+        fn $fn_name() {
+            let shape = Shape::new($shape);
+            let mut shape_iter = shape.iter();
+            $(
+                assert_eq!(shape_iter.next(), Some(TensorIndex::new($index)));
+             )*
+            assert_eq!(shape_iter.next(), None);
+        }
+    };
+}
+
+impl_shape_iter_test!(shape_iter_1d, vec![2], vec![0], vec![1]);
+impl_shape_iter_test!(shape_iter_2d, vec![2,3], vec![0,0],vec![0,1], vec![0,2],vec![1,0], vec![1,1], vec![1,2]);
+impl_shape_iter_test!(shape_iter_3d, vec![4, 2,3], 
+                      vec![0, 0, 0], vec![0, 0, 1], vec![0, 0, 2],vec![0, 1, 0], vec![0, 1, 1], vec![0, 1, 2],
+                      vec![1, 0, 0], vec![1, 0, 1], vec![1, 0, 2],vec![1, 1, 0], vec![1, 1, 1], vec![1, 1, 2],
+                      vec![2, 0, 0], vec![2, 0, 1], vec![2, 0, 2],vec![2, 1, 0], vec![2, 1, 1], vec![2, 1, 2],
+                      vec![3, 0, 0], vec![3, 0, 1], vec![3, 0, 2],vec![3, 1, 0], vec![3, 1, 1], vec![3, 1, 2]
+);
+
+macro_rules! impl_from_to_vec_test {
+    ($fn_name:ident, $from_vec:expr, $shape:expr) => {
+        #[test]
+        fn $fn_name() {
+            let tensor = Tensor::from_vec($from_vec, Shape::new($shape), false);
+            let vec = tensor.to_vec();
+            let into_vec = tensor.into_vec();
+            assert_eq!(vec, $from_vec);
+            assert_eq!(vec, into_vec);
+        }
+    }
+}
+
+impl_from_to_vec_test!(from_to_vec_1d, vec![0, 1, 2, 3, 4], vec![5]);
+impl_from_to_vec_test!(from_to_vec_2d, vec![0, 1, 2, 3, 4, 5], vec![2, 3]);
+impl_from_to_vec_test!(from_to_vec_3d, 
+    vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], vec![2, 3, 3]);
