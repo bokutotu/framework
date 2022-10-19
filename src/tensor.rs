@@ -1,8 +1,8 @@
 use std::clone::Clone;
-use std::iter::Iterator;
-use std::ops::Index;
-use std::ops::Drop;
 use std::fmt::Debug;
+use std::iter::Iterator;
+use std::ops::Drop;
+use std::ops::Index;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Shape(Vec<isize>);
@@ -209,9 +209,8 @@ impl<T: Copy + Clone> CpuInner<T> {
 
     fn to_vec(&self) -> Vec<T> {
         let cloned = self.clone();
-        let vec = unsafe { 
-            Vec::from_raw_parts(cloned.0.pointer, cloned.0.num_elm, cloned.0.num_elm) 
-        };
+        let vec =
+            unsafe { Vec::from_raw_parts(cloned.0.pointer, cloned.0.num_elm, cloned.0.num_elm) };
         std::mem::forget(cloned);
         vec
     }
@@ -345,7 +344,6 @@ impl<T> Drop for Pointer<T> {
             Pointer::Gpu(inner) => drop(inner),
             Pointer::Cpu(inner) => drop(inner),
         };
-        
     }
 }
 
@@ -399,13 +397,6 @@ impl<T: Copy + Clone> Tensor<T> {
 
     fn is_default_stride(&self) -> bool {
         self.inner.is_default_stride()
-    }
-
-    unsafe fn as_mut_ptr(&self) -> *mut T {
-        match self.inner {
-            Pointer::Cpu(ref inner) => inner.0.pointer,
-            Pointer::Gpu(ref inner) => inner.0.pointer,
-        }
     }
 }
 
@@ -539,12 +530,43 @@ macro_rules! impl_shape_iter_test {
 }
 
 impl_shape_iter_test!(shape_iter_1d, vec![2], vec![0], vec![1]);
-impl_shape_iter_test!(shape_iter_2d, vec![2,3], vec![0,0],vec![0,1], vec![0,2],vec![1,0], vec![1,1], vec![1,2]);
-impl_shape_iter_test!(shape_iter_3d, vec![4, 2,3], 
-                      vec![0, 0, 0], vec![0, 0, 1], vec![0, 0, 2],vec![0, 1, 0], vec![0, 1, 1], vec![0, 1, 2],
-                      vec![1, 0, 0], vec![1, 0, 1], vec![1, 0, 2],vec![1, 1, 0], vec![1, 1, 1], vec![1, 1, 2],
-                      vec![2, 0, 0], vec![2, 0, 1], vec![2, 0, 2],vec![2, 1, 0], vec![2, 1, 1], vec![2, 1, 2],
-                      vec![3, 0, 0], vec![3, 0, 1], vec![3, 0, 2],vec![3, 1, 0], vec![3, 1, 1], vec![3, 1, 2]
+impl_shape_iter_test!(
+    shape_iter_2d,
+    vec![2, 3],
+    vec![0, 0],
+    vec![0, 1],
+    vec![0, 2],
+    vec![1, 0],
+    vec![1, 1],
+    vec![1, 2]
+);
+impl_shape_iter_test!(
+    shape_iter_3d,
+    vec![4, 2, 3],
+    vec![0, 0, 0],
+    vec![0, 0, 1],
+    vec![0, 0, 2],
+    vec![0, 1, 0],
+    vec![0, 1, 1],
+    vec![0, 1, 2],
+    vec![1, 0, 0],
+    vec![1, 0, 1],
+    vec![1, 0, 2],
+    vec![1, 1, 0],
+    vec![1, 1, 1],
+    vec![1, 1, 2],
+    vec![2, 0, 0],
+    vec![2, 0, 1],
+    vec![2, 0, 2],
+    vec![2, 1, 0],
+    vec![2, 1, 1],
+    vec![2, 1, 2],
+    vec![3, 0, 0],
+    vec![3, 0, 1],
+    vec![3, 0, 2],
+    vec![3, 1, 0],
+    vec![3, 1, 1],
+    vec![3, 1, 2]
 );
 
 macro_rules! impl_from_to_vec_test {
@@ -557,10 +579,13 @@ macro_rules! impl_from_to_vec_test {
             assert_eq!(vec, $from_vec);
             assert_eq!(vec, into_vec);
         }
-    }
+    };
 }
 
 impl_from_to_vec_test!(from_to_vec_1d, vec![0, 1, 2, 3, 4], vec![5]);
 impl_from_to_vec_test!(from_to_vec_2d, vec![0, 1, 2, 3, 4, 5], vec![2, 3]);
-impl_from_to_vec_test!(from_to_vec_3d, 
-    vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], vec![2, 3, 3]);
+impl_from_to_vec_test!(
+    from_to_vec_3d,
+    vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+    vec![2, 3, 3]
+);
