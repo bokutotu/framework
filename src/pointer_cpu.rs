@@ -1,4 +1,4 @@
-use std::{convert::TryInto, mem::ManuallyDrop, ptr::NonNull};
+use std::ptr::NonNull;
 
 use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut};
 
@@ -30,14 +30,13 @@ macro_rules! impl_view {
 macro_rules! impl_mut {
     ( $name:ident, $lt:tt ) => {
         impl<$lt: Copy> Mut for $name<$lt> {
-            fn assign_region<P>(&mut self, other: P, offset: usize, region: usize)
+            fn assign_region<P>(&mut self, other: &P, offset: usize, region: usize)
             where
                 P: TensorPointer<Elem = <Self as TensorPointer>::Elem>,
             {
                 if !self.is_inbound((offset + region) as isize) {
                     panic!("this is out of bound");
                 }
-
                 unsafe {
                     std::ptr::copy_nonoverlapping(
                         other.as_ptr(),
@@ -50,6 +49,7 @@ macro_rules! impl_mut {
     };
 }
 
+#[repr(C)]
 pub struct OwnedCpu<E> {
     ptr: NonNull<E>,
     len: usize,
@@ -58,12 +58,13 @@ pub struct OwnedCpu<E> {
 
 impl<E> OwnedCpu<E> {
     fn from_vec(vec: Vec<E>) -> Self {
-        let mut vec = ManuallyDrop::new(vec);
+        let mut vec = vec;
         let (ptr, len, cap) = (
             NonNull::new(vec.as_mut_ptr()).expect("Failed to get Pointer for Vec"),
             vec.len(),
             vec.capacity(),
         );
+        std::mem::forget(vec);
         Self { ptr, len, cap }
     }
 }
@@ -77,8 +78,9 @@ impl<E: Copy> TensorPointer for OwnedCpu<E> {
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
         let v = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
-        let vec = ManuallyDrop::new(v);
-        ManuallyDrop::into_inner(vec).clone()
+        let res = v.clone();
+        std::mem::forget(v);
+        res
     }
 
     fn from_vec(vec: Vec<Self::Elem>) -> Self {
@@ -125,6 +127,12 @@ impl<E: Copy> Owned for OwnedCpu<E> {
 
 impl_mut!(OwnedCpu, E);
 
+impl<E> Drop for OwnedCpu<E> {
+    fn drop(&mut self) {
+        let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
+    }
+}
+
 pub struct ViewCpu<E> {
     ptr: NonNull<E>,
     offset: usize,
@@ -156,8 +164,9 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
         let v = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
-        let v_manually_drop = ManuallyDrop::into_inner(ManuallyDrop::new(v));
-        v_manually_drop.clone()
+        let res = v.clone();
+        std::mem::forget(v);
+        res
     }
 
     fn from_vec(vec: Vec<Self::Elem>) -> Self {
@@ -217,8 +226,9 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
         let v = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
-        let v_manually_drop = ManuallyDrop::into_inner(ManuallyDrop::new(v));
-        v_manually_drop.clone()
+        let res = v.clone();
+        std::mem::forget(v);
+        res
     }
 
     fn from_vec(vec: Vec<Self::Elem>) -> Self {
@@ -253,6 +263,11 @@ impl_mut!(ViewMutCpu, E);
 impl<E: Copy> ViewMut for ViewMutCpu<E> {}
 
 #[test]
+fn owned_cpu_drop_test() {
+    let mut _v = OwnedCpu::from_vec(vec![0, 1, 3]);
+}
+
+#[test]
 fn from_vec_to_vec() {
     let a = vec![0, 1, 2, 3, 4, 5];
     let owned_cpu = OwnedCpu::from_vec(a.clone());
@@ -263,8 +278,8 @@ fn from_vec_to_vec() {
 #[test]
 fn assign_region_test() {
     let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-    let pointer_ = OwnedCpu::from_vec(vec![10, 20, 30]);
-    pointer.assign_region(pointer_, 1, 3);
+    let other = OwnedCpu::from_vec(vec![10, 20, 30]);
+    pointer.assign_region(&other, 1, 3);
     let vec = pointer.to_vec();
     assert_eq!(vec![0, 10, 20, 30, 4, 5, 6, 7, 8, 9, 10], vec);
 }
@@ -273,32 +288,34 @@ fn assign_region_test() {
 #[test]
 fn assign_region_test_shoult_panic() {
     let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
-    let pointer_ = OwnedCpu::from_vec(vec![1, 3, 3]);
-    pointer.assign_region(pointer_, 1, 3);
+    let other = OwnedCpu::from_vec(vec![1, 3, 3]);
+    pointer.assign_region(&other, 1, 3);
 }
 
 #[should_panic]
 #[test]
 fn assign_region_test_shoult_panic_1() {
     let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
-    let pointer_ = OwnedCpu::from_vec(vec![1, 2]);
-    pointer.assign_region(pointer_, 3, 2);
+    let other = OwnedCpu::from_vec(vec![1, 2]);
+    pointer.assign_region(&other, 3, 2);
 }
 
 #[test]
 fn assign_region_test_mut() {
-    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).to_view_mut(0);
-    let pointer_ = OwnedCpu::from_vec(vec![10, 20, 30]);
-    pointer.assign_region(pointer_, 1, 3);
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    let mut view_mut = pointer.to_view_mut(0);
+    let other = OwnedCpu::from_vec(vec![10, 20, 30]);
+    view_mut.assign_region(&other, 1, 3);
     let vec = pointer.to_vec();
     assert_eq!(vec![0, 10, 20, 30, 4, 5, 6, 7, 8, 9, 10], vec);
 }
 
 #[test]
 fn assign_region_test_mut_offset() {
-    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6]).to_view_mut(1);
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6]);
+    let mut pointer = pointer.to_view_mut(1);
     let other = OwnedCpu::from_vec(vec![10, 20]);
-    pointer.assign_region(other, 0, 2);
+    pointer.assign_region(&other, 0, 2);
     let v = pointer.to_vec();
     assert_eq!(vec![0, 10, 20, 3, 4, 5, 6], v);
 }
@@ -306,15 +323,17 @@ fn assign_region_test_mut_offset() {
 #[should_panic]
 #[test]
 fn assign_region_test_shoult_panic_mut() {
-    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]).to_view_mut(0);
-    let pointer_ = OwnedCpu::from_vec(vec![1, 3, 3]);
-    pointer.assign_region(pointer_, 1, 3);
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
+    let mut pointer = pointer.to_view_mut(0);
+    let other = OwnedCpu::from_vec(vec![1, 3, 3]);
+    pointer.assign_region(&other, 1, 3);
 }
 
 #[should_panic]
 #[test]
 fn assign_region_test_shoult_panic_1_mut() {
-    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]).to_view_mut(0);
-    let pointer_ = OwnedCpu::from_vec(vec![1, 2]);
-    pointer.assign_region(pointer_, 3, 2);
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
+    let mut pointer = pointer.to_view_mut(1);
+    let other = OwnedCpu::from_vec(vec![1, 2]);
+    pointer.assign_region(&other, 3, 2);
 }

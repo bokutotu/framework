@@ -25,7 +25,7 @@ pub trait Owned: TensorPointer {
 }
 
 pub trait Mut: TensorPointer {
-    fn assign_region<P>(&mut self, other: P, offset: usize, region: usize)
+    fn assign_region<P>(&mut self, other: &P, offset: usize, region: usize)
     where
         P: TensorPointer<Elem = <Self as TensorPointer>::Elem>;
 }
