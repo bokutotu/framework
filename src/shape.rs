@@ -267,5 +267,3 @@ impl_shape_iter_test!(
     vec![3, 1, 1],
     vec![3, 1, 2]
 );
-
-

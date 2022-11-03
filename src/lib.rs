@@ -1,5 +1,7 @@
 pub mod graph;
 pub mod node;
-pub mod tensor;
-pub(crate) mod pointer;
+pub(crate) mod pointer_cpu;
+pub(crate) mod pointer_gpu;
+pub(crate) mod pointer_traits;
 pub(crate) mod shape;
+pub mod tensor;

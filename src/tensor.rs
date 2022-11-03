@@ -1,20 +1,19 @@
-use std::clone::Clone;
-use std::ops::Index;
-use std::ptr::NonNull;
+// use std::clone::Clone;
+// use std::ops::Index;
+// use std::ptr::NonNull;
 
+use crate::pointer_traits::TensorPointer;
 use crate::shape::{Shape, Stride, TensorIndex};
-use crate::pointer::{OwnedPointer, ViewPointer, ViewMutPointer, Pointer, MutPointer};
 
-pub struct TensorBase<P> {
+pub struct TensorBase<P, E>
+where
+    P: TensorPointer<Elem = E>,
+{
     pointer: P,
     shape: Shape,
     stride: Stride,
     num_elm: usize,
 }
-
-type Tensor<T> = TensorBase<OwnedPointer<T>>;
-type ViewTensor<T> = TensorBase<ViewPointer<T>>;
-type ViewMutTensor<T> = TensorBase<ViewMutPointer<T>>;
 
 // impl<T: Copy + Clone> Tensor<T> {
 //     fn new(pointer: *mut T, shape: Shape, stride: Stride) -> Self {
