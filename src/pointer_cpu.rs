@@ -41,7 +41,7 @@ macro_rules! impl_mut {
                 unsafe {
                     std::ptr::copy_nonoverlapping(
                         other.as_ptr(),
-                        self.as_ptr().add(offset) as *mut E,
+                        self.as_ptr().add(self.offset_num() + offset) as *mut E,
                         region,
                     )
                 }
@@ -96,6 +96,10 @@ impl<E: Copy> TensorPointer for OwnedCpu<E> {
 
     fn len(&self) -> usize {
         self.len
+    }
+
+    fn offset_num(&self) -> usize {
+        0
     }
 }
 
@@ -175,6 +179,10 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
     fn len(&self) -> usize {
         self.len - self.offset
     }
+
+    fn offset_num(&self) -> usize {
+        self.offset
+    }
 }
 
 impl_view!(ViewCpu, ViewCpu, OwnedCpu, E);
@@ -232,6 +240,10 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
     fn len(&self) -> usize {
         self.len - self.offset
     }
+
+    fn offset_num(&self) -> usize {
+        self.offset
+    }
 }
 
 impl_view!(ViewMutCpu, ViewCpu, OwnedCpu, E);
@@ -255,4 +267,54 @@ fn assign_region_test() {
     pointer.assign_region(pointer_, 1, 3);
     let vec = pointer.to_vec();
     assert_eq!(vec![0, 10, 20, 30, 4, 5, 6, 7, 8, 9, 10], vec);
+}
+
+#[should_panic]
+#[test]
+fn assign_region_test_shoult_panic() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
+    let pointer_ = OwnedCpu::from_vec(vec![1, 3, 3]);
+    pointer.assign_region(pointer_, 1, 3);
+}
+
+#[should_panic]
+#[test]
+fn assign_region_test_shoult_panic_1() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]);
+    let pointer_ = OwnedCpu::from_vec(vec![1, 2]);
+    pointer.assign_region(pointer_, 3, 2);
+}
+
+#[test]
+fn assign_region_test_mut() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).to_view_mut(0);
+    let pointer_ = OwnedCpu::from_vec(vec![10, 20, 30]);
+    pointer.assign_region(pointer_, 1, 3);
+    let vec = pointer.to_vec();
+    assert_eq!(vec![0, 10, 20, 30, 4, 5, 6, 7, 8, 9, 10], vec);
+}
+
+#[test]
+fn assign_region_test_mut_offset() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6]).to_view_mut(1);
+    let other = OwnedCpu::from_vec(vec![10, 20]);
+    pointer.assign_region(other, 0, 2);
+    let v = pointer.to_vec();
+    assert_eq!(vec![0, 10, 20, 3, 4, 5, 6], v);
+}
+
+#[should_panic]
+#[test]
+fn assign_region_test_shoult_panic_mut() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]).to_view_mut(0);
+    let pointer_ = OwnedCpu::from_vec(vec![1, 3, 3]);
+    pointer.assign_region(pointer_, 1, 3);
+}
+
+#[should_panic]
+#[test]
+fn assign_region_test_shoult_panic_1_mut() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 3]).to_view_mut(0);
+    let pointer_ = OwnedCpu::from_vec(vec![1, 2]);
+    pointer.assign_region(pointer_, 3, 2);
 }

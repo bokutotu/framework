@@ -9,6 +9,7 @@ pub trait TensorPointer: Sized {
     fn offset(&self, offset: isize) -> NonNull<Self::Elem>;
     fn as_ptr(&self) -> *const Self::Elem;
     fn len(&self) -> usize;
+    fn offset_num(&self) -> usize;
 }
 
 pub trait Owned: TensorPointer {
