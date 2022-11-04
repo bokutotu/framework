@@ -5,3 +5,4 @@ pub(crate) mod pointer_gpu;
 pub(crate) mod pointer_traits;
 pub(crate) mod shape;
 pub mod tensor;
+pub mod tensor_method;

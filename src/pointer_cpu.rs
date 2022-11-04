@@ -133,6 +133,7 @@ impl<E> Drop for OwnedCpu<E> {
     }
 }
 
+#[repr(C)]
 pub struct ViewCpu<E> {
     ptr: NonNull<E>,
     offset: usize,
@@ -196,6 +197,7 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
 
 impl_view!(ViewCpu, ViewCpu, OwnedCpu, E);
 
+#[repr(C)]
 pub struct ViewMutCpu<E> {
     ptr: NonNull<E>,
     offset: usize,
