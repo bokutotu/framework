@@ -1,5 +1,6 @@
 pub mod graph;
 pub mod node;
+pub mod owned_methods;
 pub(crate) mod pointer_cpu;
 pub(crate) mod pointer_gpu;
 pub(crate) mod pointer_traits;

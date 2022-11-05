@@ -1,15 +1,20 @@
 use std::ptr::NonNull;
 
 use crate::pointer_traits::TensorPointer;
-use crate::tensor::TensorBase;
 use crate::shape::Shape;
+use crate::tensor::TensorBase;
 
 impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     pub fn from_vec(v: Vec<E>, shape: Shape) -> Self {
         let num_elm = v.len();
         let ptr = P::from_vec(v);
         let stride = shape.default_stride();
-        TensorBase { ptr, shape, stride, num_elm }
+        TensorBase {
+            ptr,
+            shape,
+            stride,
+            num_elm,
+        }
     }
 
     pub fn to_vec(&self) -> Vec<E> {

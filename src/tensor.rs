@@ -16,6 +16,6 @@ where
     pub(crate) num_elm: usize,
 }
 
-type CpuTensor<E> = TensorBase<OwnedCpu<E>, E>;
-type CpuViewTensor<E> = TensorBase<ViewCpu<E>, E>;
-type CpuViewMutTenssor<E> = TensorBase<ViewMutCpu<E>, E>;
+pub type CpuTensor<E> = TensorBase<OwnedCpu<E>, E>;
+pub type CpuViewTensor<E> = TensorBase<ViewCpu<E>, E>;
+pub type CpuViewMutTensor<E> = TensorBase<ViewMutCpu<E>, E>;
