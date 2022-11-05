@@ -1,10 +1,6 @@
-// use std::clone::Clone;
-// use std::ops::Index;
-// use std::ptr::NonNull;
-
 use crate::pointer_cpu::{OwnedCpu, ViewCpu, ViewMutCpu};
 use crate::pointer_traits::TensorPointer;
-use crate::shape::{Shape, Stride, TensorIndex};
+use crate::shape::{Shape, Stride};
 
 pub struct TensorBase<P, E>
 where
