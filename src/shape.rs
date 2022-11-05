@@ -69,23 +69,23 @@ impl ShapeIter {
     }
 }
 
-// impl Iterator for ShapeIter {
-//     type Item = TensorIndex;
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.index == self.shape.num_elms() {
-//             return None;
-//         }
-//         let mut _index = self.index as isize;
-//         let mut index_vec = Vec::new();
-//         for stride in self.reference_vec.iter() {
-//             index_vec.push(_index / stride);
-//             _index %= stride;
-//         }
-//         index_vec.push(_index);
-//         self.index += 1;
-//         Some(TensorIndex::new(index_vec))
-//     }
-// }
+impl Iterator for ShapeIter {
+    type Item = TensorIndex;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.shape.num_elms() {
+            return None;
+        }
+        let mut _index = self.index as isize;
+        let mut index_vec = Vec::new();
+        for stride in self.reference_vec.iter() {
+            index_vec.push(_index / stride);
+            _index %= stride;
+        }
+        index_vec.push(_index);
+        self.index += 1;
+        Some(TensorIndex::new(index_vec))
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Stride(Vec<isize>);

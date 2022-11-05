@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeFull, RangeTo, RangeFrom, RangeInclusive};
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inner {
@@ -9,10 +9,10 @@ pub struct Inner {
 
 impl Inner {
     fn new(start: isize, end: Option<isize>, step: isize) -> Self {
-        Self { start , end, step }
+        Self { start, end, step }
     }
 
-    fn set_step(self, step: isize) -> Self{
+    fn set_step(self, step: isize) -> Self {
         let mut s = self;
         s.step = step;
         s
@@ -25,7 +25,7 @@ impl From<Range<isize>> for Inner {
     }
 }
 
-impl From<RangeFull> for Inner { 
+impl From<RangeFull> for Inner {
     fn from(_: RangeFull) -> Self {
         Inner::new(0, Some(-1), 1)
     }
@@ -44,7 +44,7 @@ impl From<RangeFrom<isize>> for Inner {
 }
 
 impl From<RangeInclusive<isize>> for Inner {
-    fn from(range: RangeInclusive<isize>) ->Inner {
+    fn from(range: RangeInclusive<isize>) -> Inner {
         Inner::new(*range.start(), Some(*range.end() + 1), 1)
     }
 }
@@ -56,7 +56,7 @@ impl From<isize> for Inner {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct TensorIndex ( Vec<Inner> );
+pub struct TensorIndex(Vec<Inner>);
 
 impl TensorIndex {
     fn push(&mut self, inner: Inner) {
@@ -65,8 +65,8 @@ impl TensorIndex {
 }
 
 impl From<Vec<Inner>> for TensorIndex {
-    fn from(v : Vec<Inner>) -> Self {
-        Self (v)
+    fn from(v: Vec<Inner>) -> Self {
+        Self(v)
     }
 }
 
@@ -152,10 +152,7 @@ fn index_test_full() {
 #[test]
 fn index_test_2d() {
     let index = index![1..2, ..3];
-    let v = vec![
-        Inner::new(1, Some(2), 1),
-        Inner::new(0, Some(3), 1)
-    ];
+    let v = vec![Inner::new(1, Some(2), 1), Inner::new(0, Some(3), 1)];
     let ans = TensorIndex::from(v);
     assert_eq!(ans, index);
 }
