@@ -1,4 +1,8 @@
+use std::convert::TryInto;
+
+use crate::index::TensorIndex;
 use crate::pointer_traits::Owned;
+use crate::shape::{slice_update_offset, slice_update_shape_stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor};
 
 impl<E: Copy> CpuTensor<E> {
@@ -37,5 +41,21 @@ impl<E: Copy> CpuTensor<E> {
             stride,
             num_elm,
         }
+    }
+
+    pub fn slice(&self, index: TensorIndex) -> CpuViewTensor<E> {
+        let offset = slice_update_offset(&self.shape, &self.stride, &index);
+        let (shape, stride) = slice_update_shape_stride(&self.shape, &self.stride, &index);
+        let ptr = self.ptr.to_view(offset.try_into().unwrap());
+        let num_elm = self.num_elm;
+        CpuViewTensor {ptr, shape, stride, num_elm }
+    }
+
+    pub fn slice_mut(&mut self, index: TensorIndex) -> CpuViewMutTensor<E> {
+        let offset = slice_update_offset(&self.shape, &self.stride, &index);
+        let (shape, stride) = slice_update_shape_stride(&self.shape, &self.stride, &index);
+        let ptr = self.ptr.to_view_mut(offset.try_into().unwrap());
+        let num_elm = self.num_elm;
+        CpuViewMutTensor {ptr, shape, stride, num_elm }
     }
 }
