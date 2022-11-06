@@ -48,7 +48,12 @@ impl<E: Copy> CpuTensor<E> {
         let (shape, stride) = slice_update_shape_stride(&self.shape, &self.stride, &index);
         let ptr = self.ptr.to_view(offset.try_into().unwrap());
         let num_elm = self.num_elm;
-        CpuViewTensor {ptr, shape, stride, num_elm }
+        CpuViewTensor {
+            ptr,
+            shape,
+            stride,
+            num_elm,
+        }
     }
 
     pub fn slice_mut(&mut self, index: TensorIndex) -> CpuViewMutTensor<E> {
@@ -56,6 +61,11 @@ impl<E: Copy> CpuTensor<E> {
         let (shape, stride) = slice_update_shape_stride(&self.shape, &self.stride, &index);
         let ptr = self.ptr.to_view_mut(offset.try_into().unwrap());
         let num_elm = self.num_elm;
-        CpuViewMutTensor {ptr, shape, stride, num_elm }
+        CpuViewMutTensor {
+            ptr,
+            shape,
+            stride,
+            num_elm,
+        }
     }
 }
