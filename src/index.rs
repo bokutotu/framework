@@ -1,10 +1,10 @@
-use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo};
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, Deref};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inner {
-    start: isize,
-    end: Option<isize>,
-    step: isize,
+    pub(crate) start: isize,
+    pub(crate) end: Option<isize>,
+    pub(crate) step: isize,
 }
 
 impl Inner {
@@ -16,6 +16,10 @@ impl Inner {
         let mut s = self;
         s.step = step;
         s
+    }
+
+    fn is_point_single_elm(&self) -> bool {
+        self.end.is_none()
     }
 }
 
@@ -59,6 +63,21 @@ impl From<isize> for Inner {
 pub struct TensorIndex(Vec<Inner>);
 
 impl TensorIndex {
+    pub(crate) fn from_single_elm_vec(v: Vec<isize>) -> Self {
+        let v = v
+            .iter()
+            .map(|index| Inner::from(*index))
+            .collect::<Vec<Inner>>();
+
+        Self::from(v)
+    }
+
+    pub(crate) fn is_point_single_elm(&self) -> bool {
+        self.iter()
+            .map(|item| item.is_point_single_elm())
+            .any(|x| x)
+    }
+
     fn push(&mut self, inner: Inner) {
         self.0.push(inner);
     }
@@ -67,6 +86,13 @@ impl TensorIndex {
 impl From<Vec<Inner>> for TensorIndex {
     fn from(v: Vec<Inner>) -> Self {
         Self(v)
+    }
+}
+
+impl Deref for TensorIndex {
+    type Target = Vec<Inner>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
