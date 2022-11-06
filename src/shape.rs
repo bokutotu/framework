@@ -98,16 +98,17 @@ impl Deref for Stride {
 
 /// index is not collect then panic
 pub fn valid_index(shape: &Shape, stride: &Stride, index: &TensorIndex) {
-    if shape.iter()
+    if shape
+        .iter()
         .zip(stride.iter())
         .zip(index.iter())
         .any(|((sh, st), idx)| {
             let e = match idx.end {
                 Some(e) => e,
-                None => idx.start
+                None => idx.start,
             };
             sh.abs() <= idx.start.abs() && sh.abs() <= e.abs() && st <= &idx.step.abs()
-        }) 
+        })
     {
         panic!("index is not collect");
     }
@@ -116,9 +117,10 @@ pub fn valid_index(shape: &Shape, stride: &Stride, index: &TensorIndex) {
 pub fn cal_offset(shape: &Shape, stride: &Stride, index: &TensorIndex) -> isize {
     valid_index(shape, stride, index);
     if index.is_point_single_elm() {
-        stride.iter()
+        stride
+            .iter()
             .zip(index.iter())
-            .fold(0, |offset, (st, idx)| offset + st * idx.start )
+            .fold(0, |offset, (st, idx)| offset + st * idx.start)
     } else {
         panic!("this index points region so cannot cal_offset");
     }

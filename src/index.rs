@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, Deref};
+use std::ops::{Deref, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inner {
