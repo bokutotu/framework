@@ -8,11 +8,11 @@ pub struct Inner {
 }
 
 impl Inner {
-    fn new(start: isize, end: Option<isize>, step: isize) -> Self {
+    pub fn new(start: isize, end: Option<isize>, step: isize) -> Self {
         Self { start, end, step }
     }
 
-    fn set_step(self, step: isize) -> Self {
+    pub fn set_step(self, step: isize) -> Self {
         let mut s = self;
         s.step = step;
         s
@@ -25,7 +25,7 @@ impl Inner {
 
 impl From<Range<isize>> for Inner {
     fn from(range: Range<isize>) -> Self {
-        Inner::new(range.start, Some(range.end), 1)
+        Inner::new(range.start, Some(range.end - 1), 1)
     }
 }
 
@@ -37,7 +37,7 @@ impl From<RangeFull> for Inner {
 
 impl From<RangeTo<isize>> for Inner {
     fn from(range: RangeTo<isize>) -> Self {
-        Inner::new(0, Some(range.end), 1)
+        Inner::new(0, Some(range.end - 1), 1)
     }
 }
 
@@ -49,7 +49,7 @@ impl From<RangeFrom<isize>> for Inner {
 
 impl From<RangeInclusive<isize>> for Inner {
     fn from(range: RangeInclusive<isize>) -> Inner {
-        Inner::new(*range.start(), Some(*range.end() + 1), 1)
+        Inner::new(*range.start(), Some(*range.end()), 1)
     }
 }
 
@@ -141,11 +141,11 @@ macro_rules! index {
     };
 
     (@convert $range:expr) => {
-        Inner::from($range)
+        $crate::index::Inner::from($range)
     };
 
     (@convert $range:expr, $step:expr) => {
-        Inner::from($range).set_step($step)
+        $crate::index::Inner::from($range).set_step($step)
     };
 
     ($($t:tt)*) => {
@@ -162,23 +162,30 @@ fn index_test_null() {
 #[test]
 fn index_test_int() {
     let index = index![1];
+    assert_eq!(index, TensorIndex::from(vec![Inner::new(1, None, 1)]));
 }
 #[test]
 fn index_test_1d() {
     let inner = index![1..2];
-    assert_eq!(inner, TensorIndex::from(vec![Inner::new(1, Some(2), 1)]));
+    assert_eq!(inner, TensorIndex::from(vec![Inner::new(1, Some(1), 1)]));
+}
+
+#[test]
+fn index_test_1d_eq() {
+    let index = index![1..=4];
+    assert_eq!(index, TensorIndex::from(vec![Inner::new(1, Some(4), 1)]));
 }
 
 #[test]
 fn index_test_full() {
     let index = index![1..10;2];
-    assert_eq!(index, TensorIndex::from(vec![Inner::new(1, Some(10), 2)]))
+    assert_eq!(index, TensorIndex::from(vec![Inner::new(1, Some(9), 2)]))
 }
 
 #[test]
 fn index_test_2d() {
     let index = index![1..2, ..3];
-    let v = vec![Inner::new(1, Some(2), 1), Inner::new(0, Some(3), 1)];
+    let v = vec![Inner::new(1, Some(1), 1), Inner::new(0, Some(2), 1)];
     let ans = TensorIndex::from(v);
     assert_eq!(ans, index);
 }

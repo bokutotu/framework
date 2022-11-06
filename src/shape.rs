@@ -3,6 +3,9 @@ use std::iter::Iterator;
 use std::ops::Deref;
 
 use crate::index::TensorIndex;
+// use for tests
+#[allow(unused_imports)]
+use crate::index;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Shape(Vec<isize>);
@@ -124,6 +127,30 @@ pub fn cal_offset(shape: &Shape, stride: &Stride, index: &TensorIndex) -> isize 
     } else {
         panic!("this index points region so cannot cal_offset");
     }
+}
+
+pub fn slice_update_shape_stride(
+    shape: &Shape,
+    stride: &Stride,
+    index: &TensorIndex,
+) -> (Shape, Stride) {
+    valid_index(shape, stride, index);
+    let shape_vec = index
+        .iter()
+        .map(|x| {
+            let num_elm = x.end.unwrap_or(x.start) - x.start + 1;
+            num_elm / x.step + num_elm % x.step
+        })
+        .collect::<Vec<isize>>();
+    let shape = Shape::new(shape_vec);
+
+    let stride_vec = index
+        .iter()
+        .zip(stride.iter())
+        .map(|(idx, st)| st * idx.step)
+        .collect::<Vec<isize>>();
+    let stride = Stride::new(stride_vec);
+    (shape, stride)
 }
 
 macro_rules! impl_defalut_stride_test {
@@ -283,4 +310,50 @@ impl_shape_iter_test!(
     vec![3, 1, 0],
     vec![3, 1, 1],
     vec![3, 1, 2]
+);
+
+macro_rules! slice_update_test {
+    ($fn_name:ident, $shape:expr, $stride:expr, $index:expr, $ans_shape:expr, $ans_stride:expr) => {
+        #[test]
+        fn $fn_name() {
+            let shape = Shape::new($shape);
+            let stride = Stride::new($stride);
+            let (shape, stride) = slice_update_shape_stride(&shape, &stride, &$index);
+            assert_eq!(Shape::new($ans_shape), shape);
+            assert_eq!(Stride::new($ans_stride), stride);
+        }
+    };
+}
+
+slice_update_test!(
+    default_stride_1d,
+    vec![20],
+    vec![1],
+    index!(2..15),
+    vec![13],
+    vec![1]
+);
+slice_update_test!(
+    default_stride_1d_stride,
+    vec![20],
+    vec![1],
+    index!(0..10;2),
+    vec![5],
+    vec![2]
+);
+slice_update_test!(
+    custom_stride_1d,
+    vec![20],
+    vec![2],
+    index![2..=4;2],
+    vec![2],
+    vec![4]
+);
+slice_update_test!(
+    defalut_stride_2d,
+    vec![15, 10],
+    vec![10, 1],
+    index![2, 2..5],
+    vec![1, 3],
+    vec![10, 1]
 );
