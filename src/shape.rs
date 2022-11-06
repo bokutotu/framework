@@ -135,6 +135,10 @@ pub fn slice_update_shape_stride(
     index: &TensorIndex,
 ) -> (Shape, Stride) {
     valid_index(shape, stride, index);
+    if !(shape.len() == stride.len() && shape.len() == index.len()) {
+        panic!("length of shape, stride, index must be same");
+    }
+
     let shape_vec = index
         .iter()
         .map(|x| {
@@ -151,6 +155,18 @@ pub fn slice_update_shape_stride(
         .collect::<Vec<isize>>();
     let stride = Stride::new(stride_vec);
     (shape, stride)
+}
+
+pub fn slice_update_offset(shape: &Shape, stride: &Stride, index: &TensorIndex) -> isize {
+    valid_index(shape, stride, index);
+    if !(shape.len() == stride.len() && shape.len() == index.len()) {
+        panic!("length of shape, stride, index must be same");
+    }
+
+    stride
+        .iter()
+        .zip(index.iter())
+        .fold(0, |prev, (st, idx)| prev + st * idx.start)
 }
 
 macro_rules! impl_defalut_stride_test {
@@ -312,7 +328,7 @@ impl_shape_iter_test!(
     vec![3, 1, 2]
 );
 
-macro_rules! slice_update_test {
+macro_rules! impl_slice_update_test {
     ($fn_name:ident, $shape:expr, $stride:expr, $index:expr, $ans_shape:expr, $ans_stride:expr) => {
         #[test]
         fn $fn_name() {
@@ -325,7 +341,7 @@ macro_rules! slice_update_test {
     };
 }
 
-slice_update_test!(
+impl_slice_update_test!(
     default_stride_1d,
     vec![20],
     vec![1],
@@ -333,7 +349,7 @@ slice_update_test!(
     vec![13],
     vec![1]
 );
-slice_update_test!(
+impl_slice_update_test!(
     default_stride_1d_stride,
     vec![20],
     vec![1],
@@ -341,7 +357,7 @@ slice_update_test!(
     vec![5],
     vec![2]
 );
-slice_update_test!(
+impl_slice_update_test!(
     custom_stride_1d,
     vec![20],
     vec![2],
@@ -349,7 +365,7 @@ slice_update_test!(
     vec![2],
     vec![4]
 );
-slice_update_test!(
+impl_slice_update_test!(
     defalut_stride_2d,
     vec![15, 10],
     vec![10, 1],
