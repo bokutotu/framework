@@ -373,3 +373,24 @@ impl_slice_update_test!(
     vec![1, 3],
     vec![10, 1]
 );
+
+macro_rules! impl_slice_update_test {
+    ($fn_name:ident, $shape:expr, $stride:expr, $index:expr, $ans:expr) => {
+        #[test]
+        fn $fn_name() {
+            let shape = Shape::new($shape);
+            let stride = Stride::new($stride);
+            let offset = slice_update_offset(&shape, &stride, &$index);
+            assert_eq!(offset, $ans)
+        }
+    };
+}
+
+impl_slice_update_test!(default_stride_1d_offset, vec![10], vec![1], index![3..4], 3);
+impl_slice_update_test!(
+    default_stride_2d_offset,
+    vec!(5, 2),
+    vec![2, 1],
+    index![2..3, 1..3],
+    5
+);

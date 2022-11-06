@@ -77,10 +77,6 @@ impl TensorIndex {
             .map(|item| item.is_point_single_elm())
             .any(|x| x)
     }
-
-    fn push(&mut self, inner: Inner) {
-        self.0.push(inner);
-    }
 }
 
 impl From<Vec<Inner>> for TensorIndex {
