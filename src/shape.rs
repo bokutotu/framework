@@ -145,7 +145,7 @@ pub fn slice_update_shape_stride(
         .map(|(idx, x)| {
             let mut end = x.end.unwrap_or(x.start);
             if end < 0 {
-                end = shape[idx] + end;
+                end += shape[idx];
             }
             let num_elm = (end - x.start).abs() + 1;
             num_elm / x.step + num_elm % x.step

@@ -1,4 +1,4 @@
-use std::{ptr::NonNull, convert::TryInto};
+use std::{convert::TryInto, ptr::NonNull};
 
 use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut};
 
