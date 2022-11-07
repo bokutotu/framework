@@ -30,11 +30,7 @@ where
             .try_into()
             .unwrap();
         let a_offset = cal_offset(&shape, &a.stride, &index).try_into().unwrap();
-        dbg!(ptr_offset);
-        dbg!(a_offset);
-        dbg!(ptr.len());
         let other_ptr = a.ptr.access_by_offset_region(a_offset, 1);
-        dbg!(other_ptr.len());
         ptr.assign_region(&other_ptr, ptr_offset, 1);
     }
     ptr
