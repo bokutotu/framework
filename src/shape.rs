@@ -141,8 +141,13 @@ pub fn slice_update_shape_stride(
 
     let shape_vec = index
         .iter()
-        .map(|x| {
-            let num_elm = x.end.unwrap_or(x.start) - x.start + 1;
+        .enumerate()
+        .map(|(idx, x)| {
+            let mut end = x.end.unwrap_or(x.start);
+            if end < 0 {
+                end = shape[idx] + end;
+            }
+            let num_elm = (end - x.start).abs() + 1;
             num_elm / x.step + num_elm % x.step
         })
         .collect::<Vec<isize>>();
@@ -342,7 +347,7 @@ macro_rules! impl_slice_update_test {
 }
 
 impl_slice_update_test!(
-    default_stride_1d,
+    stride_shape_update_default_stride_1d,
     vec![20],
     vec![1],
     index!(2..15),
@@ -350,7 +355,7 @@ impl_slice_update_test!(
     vec![1]
 );
 impl_slice_update_test!(
-    default_stride_1d_stride,
+    stride_shape_update_default_stride_1d_stride,
     vec![20],
     vec![1],
     index!(0..10;2),
@@ -358,7 +363,7 @@ impl_slice_update_test!(
     vec![2]
 );
 impl_slice_update_test!(
-    custom_stride_1d,
+    stride_shape_update_custom_stride_1d,
     vec![20],
     vec![2],
     index![2..=4;2],
@@ -366,12 +371,21 @@ impl_slice_update_test!(
     vec![4]
 );
 impl_slice_update_test!(
-    defalut_stride_2d,
+    stride_shape_update_defalut_stride_2d,
     vec![15, 10],
     vec![10, 1],
     index![2, 2..5],
     vec![1, 3],
     vec![10, 1]
+);
+
+impl_slice_update_test!(
+    stride_shape_update_default_stride_1d_range_full_stride,
+    vec![15],
+    vec![1],
+    index![..;2],
+    vec![8],
+    vec![2]
 );
 
 macro_rules! impl_slice_update_test {
