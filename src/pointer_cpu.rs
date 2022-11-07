@@ -1,4 +1,4 @@
-use std::ptr::NonNull;
+use std::{ptr::NonNull, convert::TryInto};
 
 use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut};
 
@@ -34,13 +34,13 @@ macro_rules! impl_mut {
             where
                 P: TensorPointer<Elem = <Self as TensorPointer>::Elem>,
             {
-                if !self.is_inbound((offset + region) as isize) {
+                if !self.is_inbound((offset + region - 1) as isize) {
                     panic!("this is out of bound");
                 }
                 unsafe {
                     std::ptr::copy_nonoverlapping(
                         other.as_ptr(),
-                        self.as_ptr().add(self.offset_num() + offset) as *mut E,
+                        self.as_ptr().add(offset) as *mut E,
                         region,
                     )
                 }
@@ -179,11 +179,11 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
         if !self.is_inbound(offset) {
             panic!("offset is out of bound");
         }
-        unsafe { NonNull::new(self.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
+        unsafe { NonNull::new(self.ptr.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
     }
 
     fn as_ptr(&self) -> *const Self::Elem {
-        self.ptr.as_ptr()
+        unsafe { self.ptr.as_ptr().add(self.offset) }
     }
 
     fn len(&self) -> usize {
@@ -242,11 +242,11 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
         if !self.is_inbound(offset) {
             panic!("offset is out of bound");
         }
-        unsafe { NonNull::new(self.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
+        unsafe { NonNull::new(self.ptr.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
     }
 
     fn as_ptr(&self) -> *const Self::Elem {
-        self.ptr.as_ptr()
+        unsafe { self.ptr.as_ptr().add(self.offset) }
     }
 
     fn len(&self) -> usize {
@@ -320,6 +320,17 @@ fn assign_region_test_mut_offset() {
     pointer.assign_region(&other, 0, 2);
     let v = pointer.to_vec();
     assert_eq!(vec![0, 10, 20, 3, 4, 5, 6], v);
+}
+
+#[test]
+fn assign_region_test_view_mut_view_both_offset() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6]);
+    let mut pointer = pointer.to_view_mut(1);
+    let other = OwnedCpu::from_vec(vec![10, 20, 30, 40]);
+    let other = other.to_view(1);
+    pointer.assign_region(&other, 1, 3);
+    let v = pointer.to_vec();
+    assert_eq!(v, vec![0, 1, 20, 30, 40, 5, 6]);
 }
 
 #[should_panic]

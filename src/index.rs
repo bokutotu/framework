@@ -95,7 +95,7 @@ impl Deref for TensorIndex {
 #[macro_export]
 macro_rules! index {
     (@parse [$($stack:tt)*] $range:expr;$step:expr) => {
-            TensorIndex::from(
+            $crate::index::TensorIndex::from(
                 vec![
                     $($stack)*
                     index!(@convert $range, $step)
@@ -104,7 +104,7 @@ macro_rules! index {
     };
 
     (@parse [$($stack:tt)*] $range:expr) => {
-            TensorIndex::from(
+            $crate::index::TensorIndex::from(
                 vec![
                     $($stack)*
                     index!(@convert $range)
@@ -164,6 +164,22 @@ fn index_test_int() {
 fn index_test_1d() {
     let inner = index![1..2];
     assert_eq!(inner, TensorIndex::from(vec![Inner::new(1, Some(1), 1)]));
+}
+
+#[test]
+fn index_test_1d_rangefull() {
+    let index = index![..];
+    let ans = Inner::new(0, Some(-1), 1);
+    let ans = TensorIndex::from(vec![ans]);
+    assert_eq!(index, ans)
+}
+
+#[test]
+fn index_test_1d_rengaefull_step() {
+    let index = index![..;2];
+    let ans_inner = Inner::new(0, Some(-1), 2);
+    let ans = TensorIndex::from(vec![ans_inner]);
+    assert_eq!(ans, index);
 }
 
 #[test]

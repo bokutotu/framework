@@ -1,16 +1,17 @@
 use std::convert::TryInto;
+use std::fmt::Debug;
 
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
-use crate::pointer_traits::{TensorPointer, View};
+use crate::pointer_traits::{TensorPointer, View, Mut};
 use crate::shape::cal_offset;
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor, TensorBase};
 
 fn cpu_shrink_to<P, E>(a: TensorBase<P, E>) -> OwnedCpu<E>
 where
     P: View<AccessOutput = ViewCpu<E>, OwnedOutput = OwnedCpu<E>> + TensorPointer<Elem = E>,
-    E: Copy + Num,
+    E: Copy + Num + Debug,
 {
     let shape = a.shape.clone();
     let default_stride = shape.default_stride();
@@ -21,15 +22,22 @@ where
         v.push(E::zero());
     }
 
+    let mut ptr = OwnedCpu::from_vec(v);
+
     let shape_iter = shape.to_shape_iter();
     for index in shape_iter {
-        let v_offset: usize = cal_offset(&shape, &default_stride, &index)
+        let ptr_offset: usize = cal_offset(&shape, &default_stride, &index)
             .try_into()
             .unwrap();
         let a_offset = cal_offset(&shape, &a.stride, &index).try_into().unwrap();
-        v[v_offset] = unsafe { *a.ptr.access_by_offset_region(a_offset, 1).as_ptr() };
+        dbg!(ptr_offset);
+        dbg!(a_offset);
+        dbg!(ptr.len());
+        let other_ptr = a.ptr.access_by_offset_region(a_offset, 1);
+        dbg!(other_ptr.len());
+        ptr.assign_region(&other_ptr, ptr_offset, 1);
     }
-    OwnedCpu::from_vec(v)
+    ptr
 }
 
 macro_rules! impl_to_owned {
@@ -54,5 +62,5 @@ macro_rules! impl_to_owned {
         }
     };
 }
-impl_to_owned!((E: Copy + Num), CpuViewTensor<E>, CpuTensor<E>);
-impl_to_owned!((E: Copy + Num), CpuViewMutTensor<E>, CpuTensor<E>);
+impl_to_owned!((E: Copy + Num + Debug), CpuViewTensor<E>, CpuTensor<E>);
+impl_to_owned!((E: Copy + Num + Debug), CpuViewMutTensor<E>, CpuTensor<E>);

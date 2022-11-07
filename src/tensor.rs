@@ -25,3 +25,17 @@ fn to_view_to_onwend_test() {
     let to_owned = view.into_owned();
     assert_eq!(from_vec, to_owned.to_vec());
 }
+
+#[test]
+fn shrink_to_view_test() {
+    use crate::index;
+    let mut v = Vec::new();
+    for i in 0..25 {
+        v.push(i);
+    }
+    let a = CpuTensor::from_vec(v, Shape::new(vec![5,5]));
+    let av = a.slice(index![2..4, ..;2]);
+    let avv = av.into_owned().to_vec();
+    let ans = vec![10, 12, 14, 15, 17, 19];
+    assert_eq!(ans, avv);
+}
