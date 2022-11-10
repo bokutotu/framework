@@ -1,5 +1,5 @@
-use cblas::*;
 use crate::define_impl;
+use cblas::*;
 
 define_impl! {
     CpuGemm,
