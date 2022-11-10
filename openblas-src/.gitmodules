@@ -1,0 +1,3 @@
+[submodule "source"]
+	path = openblas-src/source
+	url = https://github.com/xianyi/OpenBLAS.git

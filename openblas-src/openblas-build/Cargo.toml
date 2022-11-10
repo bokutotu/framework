@@ -1,0 +1,20 @@
+[package]
+name = "openblas-build"
+version = "0.10.5"
+license = "Apache-2.0/MIT"
+edition = "2018"
+authors = [
+    "Toshiki Teramura <toshiki.teramura@gmail.com>",
+]
+description = "The package provides a build helper for OpenBLAS."
+documentation = "https://docs.rs/openblas-build"
+homepage = "https://github.com/blas-lapack-rs/openblas-src"
+repository = "https://github.com/blas-lapack-rs/openblas-src"
+readme  = "../README.md"
+exclude = [
+    "test_build/",
+]
+
+[dependencies]
+thiserror = "1.0.22"
+walkdir = "2.3.1"
