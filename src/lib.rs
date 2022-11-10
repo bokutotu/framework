@@ -1,7 +1,7 @@
 extern crate cblas;
 extern crate openblas_src;
 
-pub mod blas_wrapper_cpu;
+pub mod wrapper;
 pub mod graph;
 pub mod index;
 pub mod node;
