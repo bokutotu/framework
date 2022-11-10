@@ -182,28 +182,6 @@ define_impl!(
     )
 );
 
-define_impl! {
-    CpuGemm,
-    cpu_gemm,
-    ((sgemm, f32), (dgemm, f64)),
-    (
-        layout: Layout,
-        transa: Transpose,
-        transb: Transpose,
-        m: i32,
-        n: i32,
-        k: i32,
-        alpha: Self,
-        a: &[Self],
-        lda: i32,
-        b: &[Self],
-        ldb: i32,
-        beta: Self,
-        c: &mut [Self],
-        ldc: i32
-    )
-}
-
 define_impl!(
     CpuGerc,
     cpu_gerc,
@@ -444,6 +422,129 @@ define_impl!(
         lda: i32,
         x: &mut [Self],
         incx: i32
+    )
+);
+
+define_impl! {
+    CpuGemm,
+    cpu_gemm,
+    ((sgemm, f32), (dgemm, f64)),
+    (
+        layout: Layout,
+        transa: Transpose,
+        transb: Transpose,
+        m: i32,
+        n: i32,
+        k: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        b: &[Self],
+        ldb: i32,
+        beta: Self,
+        c: &mut [Self],
+        ldc: i32
+    )
+}
+
+define_impl!(
+    CpuSymm,
+    cpu_symm,
+    ((ssymm, f32), (dsymm, f64)),
+    (
+        layout: Layout,
+        side: Side,
+        uplo: Part,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        b: &[Self],
+        ldb: i32,
+        beta: Self,
+        c: &mut [Self],
+        ldc: i32
+    )
+);
+
+define_impl!(
+    CpuSyrk,
+    cpu_syrk,
+    ((ssyrk, f32), (dsyrk, f64)),
+    (
+        layout: Layout,
+        uplo: Part,
+        trans: Transpose,
+        n: i32,
+        k: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        beta: Self,
+        c: &mut [Self],
+        ldc: i32
+    )
+);
+
+define_impl!(
+    CpuSyr2k,
+    cpu_syrk,
+    ((ssyr2k, f32), (dsyr2k, f64)),
+    (
+        layout: Layout,
+        uplo: Part,
+        trans: Transpose,
+        n: i32,
+        k: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        b: &[Self],
+        ldb: i32,
+        beta: Self,
+        c: &mut [Self],
+        ldc: i32
+    )
+);
+
+define_impl!(
+    CpuTrmm,
+    cpu_trmm,
+    ((strmm, f32), (dtrmm, f64)),
+    (
+        layout: Layout,
+        side: Side,
+        uplo: Part,
+        transa: Transpose,
+        diag: Diagonal,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        b: &mut [Self],
+        ldb: i32
+    )
+);
+
+define_impl!(
+    CpuTrsm,
+    cpu_trsm,
+    ((strsm, f32), (dtrsm, f64)),
+    (
+        layout: Layout,
+        side: Side,
+        uplo: Part,
+        transa: Transpose,
+        diag: Diagonal,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        b: &mut [Self],
+        ldb: i32
     )
 );
 
