@@ -1,0 +1,35 @@
+diff --git a/openblas-build/src/build.rs b/openblas-build/src/build.rs
+index e877eaa..b4444fa 100644
+--- a/openblas-build/src/build.rs
++++ b/openblas-build/src/build.rs
+@@ -235,7 +235,7 @@ pub struct Configure {
+     pub no_cblas: bool,
+     pub no_lapack: bool,
+     pub no_lapacke: bool,
+-    pub use_thread: bool,
++    // pub use_thread: bool,
+     pub use_openmp: bool,
+     pub dynamic_arch: bool,
+     pub interface: Interface,
+@@ -250,7 +250,7 @@ impl Default for Configure {
+             no_cblas: false,
+             no_lapack: false,
+             no_lapacke: false,
+-            use_thread: false,
++            // use_thread: false,
+             use_openmp: false,
+             dynamic_arch: false,
+             interface: Interface::LP64,
+@@ -287,9 +287,9 @@ impl Configure {
+         if self.no_lapacke {
+             args.push("NO_LAPACKE=1".into())
+         }
+-        if self.use_thread {
+-            args.push("USE_THREAD=1".into())
+-        }
++        // if self.use_thread {
++        //     args.push("USE_THREAD=1".into())
++        // }
+         if self.use_openmp {
+             args.push("USE_OPENMP=1".into())
+         }

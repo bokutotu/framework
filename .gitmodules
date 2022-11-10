@@ -1,0 +1,3 @@
+[submodule "openblas-src"]
+	path = openblas-src
+	url = git@github.com:blas-lapack-rs/openblas-src.git
