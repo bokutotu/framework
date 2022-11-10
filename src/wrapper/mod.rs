@@ -23,6 +23,7 @@ macro_rules! define_impl {
 
     (@r $trait:ident, $fn_name:ident, {($call_fn:ident, $impl_ty:ty ) $(($call_fn_:ident, $impl_ty_:ty ))*}, ($($arg:ident : $ty:ty),*)) => {
         impl $trait for $impl_ty {
+            #[inline(always)]
             fn $fn_name( $($arg: $ty),* ) {
                 unsafe {
                     $call_fn( $( $arg ),* )
@@ -35,6 +36,7 @@ macro_rules! define_impl {
     (@r $trait:ident, $fn_name:ident, {($call_fn:ident, $impl_ty:ty, $return_ty:ty ) $(($call_fn_:ident, $impl_ty_:ty, $return_ty_:ty ))*}, ($($arg:ident : $ty:ty),*)) => {
         impl $trait for $impl_ty {
             type Out = $return_ty;
+            #[inline(always)]
             fn $fn_name( $($arg: $ty),* ) -> Self::Out{
                 unsafe {
                     $call_fn( $( $arg ),* )
@@ -108,5 +110,3 @@ fn macro_test_return_diff_type() {
     assert_eq!(f32::func_r_n(0., 1.), 1.);
     assert_eq!(f64::func_r_n(0., 1.), 1.);
 }
-
-
