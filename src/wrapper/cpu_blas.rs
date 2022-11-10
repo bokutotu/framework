@@ -94,6 +94,41 @@ define_impl!(
     (n: &mut Self, b: &mut Self, c: &mut Self, s: &mut [Self])
 );
 
+define_impl!(
+    CpuRotm,
+    cpu_rotm,
+    ((srotm, f32), (drotm, f64)),
+    (n: i32, x: &mut [Self], incx: i32, y: &mut [Self], incy: i32, p: &[Self])
+);
+
+define_impl!(
+    CpuSrotmg,
+    cpu_srotmg,
+    ((srotmg, f32), (drotmg, f64)),
+    (d1: &mut [Self], d2: &mut [Self], b1: &mut [Self], b2: Self, p: &mut [Self])
+);
+
+define_impl!(
+    CpuScal,
+    cpu_scal, 
+    ((sscal, f32), (dscal, f64)),
+    (n: i32, alpha: Self, x: &mut [Self], incx: i32)
+);
+
+define_impl!(
+    CpuSwap,
+    cpu_swap,
+    ((sswap, f32), (dswap, f64)),
+    (n: i32, x: &mut [Self], incx: i32, y: &mut [Self], incy: i32)
+);
+
+define_impl!(
+    CpuIamax,
+    cpu_iamax,
+    ((isamax, f32, i32), (idamax, f64, i32)),
+    (n: i32, x: &[Self], incx: i32)
+);
+
 #[test]
 fn gemm_test() {
     let (m, n, k) = (2, 4, 3);
