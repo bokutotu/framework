@@ -1,5 +1,0 @@
-[workspace]
-members = [
-  "openblas-src",
-  "openblas-build",
-]
