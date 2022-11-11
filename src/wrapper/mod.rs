@@ -7,14 +7,14 @@ macro_rules! define_impl {
     };
 
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty)),*), ($($arg:ident : $ty:ty),*)) => {
-        trait $trait: Sized {
+        pub trait $trait: Sized {
             fn $fn_name($($arg:$ty),*);
         }
         define_impl!(@r $trait, $fn_name, {$(($call_fn, $impl_ty ))*}, ($($arg: $ty),*));
     };
 
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty, $return_ty:ty )),*), ($($arg:ident : $ty:ty),*)) => {
-        trait $trait: Sized {
+        pub trait $trait: Sized {
             type Out : Sized;
             fn $fn_name($($arg:$ty),*)  -> Self::Out ;
         }

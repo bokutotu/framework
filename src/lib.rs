@@ -9,9 +9,10 @@ pub mod shape;
 pub mod tensor;
 pub mod tensor_methods;
 pub mod view_methods;
-pub mod wrapper;
 
+mod blas;
 mod pointer_cpu;
 mod pointer_gpu;
 mod pointer_traits;
 mod tensor_impl_traits;
+mod wrapper;

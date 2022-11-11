@@ -6,7 +6,9 @@ pub trait TensorPointer: Sized {
     /// clone mem and make vec
     fn to_vec(&self) -> Vec<Self::Elem>;
     fn from_vec(vec: Vec<Self::Elem>) -> Self;
+    /// Pointerで保持されている先頭から、offset分だけoffsetしNonNUllを返す
     fn offset(&self, offset: isize) -> NonNull<Self::Elem>;
+    /// Pointerで保持されている先頭のポインタを返す
     fn as_ptr(&self) -> *const Self::Elem;
     fn len(&self) -> usize;
     fn offset_num(&self) -> usize;
