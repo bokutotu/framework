@@ -90,6 +90,10 @@ impl Stride {
     pub(crate) fn new(vec: Vec<isize>) -> Self {
         Stride(vec)
     }
+
+    pub(crate) fn to_vec(&self) -> Vec<isize> {
+        self.0.clone()
+    }
 }
 
 impl Deref for Stride {

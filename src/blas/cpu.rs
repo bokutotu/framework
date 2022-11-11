@@ -1,3 +1,5 @@
+/// warning: このファイルでwrapされるblasはshapeに関する一切のcheckを行いません。
+
 use crate::wrapper::cpu_blas::*;
 use crate::tensor::CpuViewTensor;
 

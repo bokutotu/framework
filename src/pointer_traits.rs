@@ -42,3 +42,7 @@ pub trait View: TensorPointer {
 }
 
 pub trait ViewMut: View + Mut {}
+
+pub trait Cpu: TensorPointer {
+    fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem];
+}

@@ -39,3 +39,20 @@ fn shrink_to_view_test() {
     let ans = vec![10, 12, 14, 15, 17, 19];
     assert_eq!(ans, avv);
 }
+
+#[test]
+fn to_slice_owned() {
+    let v = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![3, 3]));
+    let slice = a.to_slice();
+    assert_eq!(&v, slice)
+}
+
+#[test]
+fn to_slice_view() {
+    let v = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+    let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![3, 3]));
+    let a = a.to_view();
+    let slice = a.to_slice();
+    assert_eq!(&v, slice)
+}

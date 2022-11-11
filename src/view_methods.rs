@@ -1,10 +1,9 @@
-use std::convert::TryInto;
 use std::fmt::Debug;
 
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
-use crate::pointer_traits::{Mut, TensorPointer, View};
+use crate::pointer_traits::{Mut, TensorPointer, View, Cpu};
 use crate::shape::cal_offset;
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor, TensorBase};
 
@@ -60,3 +59,25 @@ macro_rules! impl_to_owned {
 }
 impl_to_owned!((E: Copy + Num + Debug), CpuViewTensor<E>, CpuTensor<E>);
 impl_to_owned!((E: Copy + Num + Debug), CpuViewMutTensor<E>, CpuTensor<E>);
+
+macro_rules! impl_to_slice {
+    (($($generics:tt)*), $self:ty) => {
+        impl<$($generics)*>  $self {
+            pub fn to_slice<'a>(&'a self) -> &'a [E] {
+                let mut sorted_stride = self.stride.to_vec();
+                sorted_stride.sort();
+                sorted_stride.reverse();
+                if sorted_stride == self.shape.default_stride().to_vec() {
+                    self.ptr.to_slice()
+                } else {
+                    panic!("oppai");
+                    // dbg!("h");
+                    // let a: CpuTensor<E> = self.clone().into_owned();
+                    // a.to_slice()
+                }
+            }
+        }
+    };
+}
+impl_to_slice!((E: Copy + Num + Debug), CpuViewTensor<E>);
+impl_to_slice!((E: Copy + Num + Debug), CpuViewMutTensor<E>);

@@ -1,6 +1,6 @@
-use std::{convert::TryInto, ptr::NonNull};
+use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut};
+use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut, Cpu};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
@@ -33,6 +33,7 @@ macro_rules! impl_mut {
             fn assign_region<P>(&mut self, other: &P, offset: usize, region: usize)
             where
                 P: TensorPointer<Elem = <Self as TensorPointer>::Elem>,
+                // P: View<AccessOutput = ViewCpu<E>, OwnedOutput = OwnedCpu<E>> + TensorPointer<Elem = E>,
             {
                 if !self.is_inbound((offset + region - 1) as isize) {
                     panic!("this is out of bound");
@@ -44,6 +45,16 @@ macro_rules! impl_mut {
                         region,
                     )
                 }
+            }
+        }
+    };
+}
+
+macro_rules! impl_cpu {
+    ( $name:ident, $lt:tt) => {
+        impl<$lt: Copy> Cpu for $name<$lt> {
+            fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem] {
+                unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) } 
             }
         }
     };
@@ -126,6 +137,14 @@ impl<E: Copy> Owned for OwnedCpu<E> {
 }
 
 impl_mut!(OwnedCpu, E);
+impl_cpu!(OwnedCpu, E);
+
+impl<E: Copy> Clone for OwnedCpu<E> {
+    fn clone(&self) -> Self {
+        let v = self.to_vec();
+        Self::from_vec(v)
+    }
+}
 
 impl<E> Drop for OwnedCpu<E> {
     fn drop(&mut self) {
@@ -197,6 +216,8 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
 
 impl_view!(ViewCpu, ViewCpu, OwnedCpu, E);
 
+impl_cpu!(ViewCpu, E);
+
 #[repr(C)]
 pub struct ViewMutCpu<E> {
     ptr: NonNull<E>,
@@ -261,6 +282,7 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
 impl_view!(ViewMutCpu, ViewCpu, OwnedCpu, E);
 
 impl_mut!(ViewMutCpu, E);
+impl_cpu!(ViewMutCpu, E);
 
 impl<E: Copy> ViewMut for ViewMutCpu<E> {}
 
@@ -349,4 +371,43 @@ fn assign_region_test_shoult_panic_1_mut() {
     let mut pointer = pointer.to_view_mut(1);
     let other = OwnedCpu::from_vec(vec![1, 2]);
     pointer.assign_region(&other, 3, 2);
+}
+
+#[test]
+fn owned_cpu_to_slice() {
+    let pointer = OwnedCpu::from_vec(vec![0, 1, 2]);
+    let s = pointer.to_slice();
+    assert_eq!(s, &[0, 1, 2]);
+}
+
+#[test]
+fn view_cpu_to_slice() {
+    let pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let pointer = pointer.to_view(0);
+    let s = pointer.to_slice();
+    assert_eq!(s, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
+}
+
+#[test]
+fn view_cpu_to_slice_with_offset() {
+    let pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let pointer = pointer.to_view(1);
+    let s = pointer.to_slice();
+    assert_eq!(s, &[1, 2, 3, 4, 5, 6, 7, 8]);
+}
+
+#[test]
+fn view_mut_cpu_to_slice() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let pointer = pointer.to_view_mut(0);
+    let s = pointer.to_slice();
+    assert_eq!(s, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
+}
+
+#[test]
+fn view_mut_cpu_to_slice_with_offset() {
+    let mut pointer = OwnedCpu::from_vec(vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    let pointer = pointer.to_view_mut(1);
+    let s = pointer.to_slice();
+    assert_eq!(s, &[1, 2, 3, 4, 5, 6, 7, 8]);
 }
