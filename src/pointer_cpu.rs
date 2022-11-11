@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut, ToSlice};
+use crate::pointer_traits::{Mut, Owned, TensorPointer, ToSlice, View, ViewMut};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
@@ -53,7 +53,7 @@ macro_rules! impl_cpu {
     ( $name:ident, $lt:tt) => {
         impl<$lt: Copy> ToSlice for $name<$lt> {
             fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem] {
-                unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) } 
+                unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) }
             }
         }
     };
@@ -152,7 +152,7 @@ impl<E> Drop for OwnedCpu<E> {
 }
 
 impl<E: Copy> OwnedCpu<E> {
-    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut  [<Self as TensorPointer>::Elem] {
+    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut [<Self as TensorPointer>::Elem] {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr().cast_mut(), self.len) }
     }
 }

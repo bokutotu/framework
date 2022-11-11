@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
-use crate::pointer_traits::{Mut, TensorPointer, View, ToSlice};
+use crate::pointer_traits::{Mut, TensorPointer, ToSlice, View};
 use crate::shape::{cal_offset, Stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor, TensorBase};
 
