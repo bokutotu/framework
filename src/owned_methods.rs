@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use crate::index::TensorIndex;
-use crate::pointer_traits::{Owned, Cpu};
+use crate::pointer_traits::{Owned, ToSlice};
 use crate::shape::{slice_update_offset, slice_update_shape_stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor};
 
@@ -71,5 +71,9 @@ impl<E: Copy> CpuTensor<E> {
 
     pub fn to_slice<'a>(&'a self) -> &'a [E] {
         self.ptr.to_slice()
+    }
+
+    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut [E] {
+        self.ptr.to_slice_mut()
     }
 }

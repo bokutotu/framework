@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
-use crate::pointer_traits::{Mut, TensorPointer, View, Cpu};
-use crate::shape::cal_offset;
+use crate::pointer_traits::{Mut, TensorPointer, View, ToSlice};
+use crate::shape::{cal_offset, Stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor, TensorBase};
 
 fn cpu_shrink_to<P, E>(a: TensorBase<P, E>) -> OwnedCpu<E>
@@ -67,7 +67,7 @@ macro_rules! impl_to_slice {
                 let mut sorted_stride = self.stride.to_vec();
                 sorted_stride.sort();
                 sorted_stride.reverse();
-                if sorted_stride == self.shape.default_stride().to_vec() {
+                if self.shape.is_default_stride(&Stride::new(sorted_stride)) {
                     self.ptr.to_slice()
                 } else {
                     panic!("oppai");
@@ -81,3 +81,16 @@ macro_rules! impl_to_slice {
 }
 impl_to_slice!((E: Copy + Num + Debug), CpuViewTensor<E>);
 impl_to_slice!((E: Copy + Num + Debug), CpuViewMutTensor<E>);
+
+impl<E: Copy> CpuViewMutTensor<E> {
+    pub fn to_slice_mut<'a>(&'a self) -> &'a mut [E] {
+        let mut sorted_stride = self.stride.to_vec();
+        sorted_stride.sort();
+        sorted_stride.reverse();
+        if self.shape.is_default_stride(&Stride::new(sorted_stride)) {
+            self.ptr.to_slice_mut()
+        } else {
+            panic!("oppai");
+        }
+    }
+}

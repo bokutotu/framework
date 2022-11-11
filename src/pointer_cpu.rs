@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut, Cpu};
+use crate::pointer_traits::{Mut, Owned, TensorPointer, View, ViewMut, ToSlice};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
@@ -33,7 +33,6 @@ macro_rules! impl_mut {
             fn assign_region<P>(&mut self, other: &P, offset: usize, region: usize)
             where
                 P: TensorPointer<Elem = <Self as TensorPointer>::Elem>,
-                // P: View<AccessOutput = ViewCpu<E>, OwnedOutput = OwnedCpu<E>> + TensorPointer<Elem = E>,
             {
                 if !self.is_inbound((offset + region - 1) as isize) {
                     panic!("this is out of bound");
@@ -52,7 +51,7 @@ macro_rules! impl_mut {
 
 macro_rules! impl_cpu {
     ( $name:ident, $lt:tt) => {
-        impl<$lt: Copy> Cpu for $name<$lt> {
+        impl<$lt: Copy> ToSlice for $name<$lt> {
             fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem] {
                 unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) } 
             }
@@ -149,6 +148,12 @@ impl<E: Copy> Clone for OwnedCpu<E> {
 impl<E> Drop for OwnedCpu<E> {
     fn drop(&mut self) {
         let _ = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
+    }
+}
+
+impl<E: Copy> OwnedCpu<E> {
+    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut  [<Self as TensorPointer>::Elem] {
+        unsafe { std::slice::from_raw_parts_mut(self.as_ptr().cast_mut(), self.len) }
     }
 }
 
@@ -285,6 +290,12 @@ impl_mut!(ViewMutCpu, E);
 impl_cpu!(ViewMutCpu, E);
 
 impl<E: Copy> ViewMut for ViewMutCpu<E> {}
+
+impl<E: Copy> ViewMutCpu<E> {
+    pub fn to_slice_mut<'a>(&'a self) -> &'a mut [<Self as TensorPointer>::Elem] {
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
+    }
+}
 
 #[test]
 fn owned_cpu_drop_test() {
