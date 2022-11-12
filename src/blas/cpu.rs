@@ -28,13 +28,13 @@ pub fn axpy<E: CpuAxpy + Copy + Num + Debug>(
     b: CpuViewMutTensor<E>,
 ) {
     let a_slice = a.to_slice();
-    let mut b_slice = b.to_slice_mut();
+    let b_slice = b.to_slice_mut();
     E::cpu_axpy(
         a.num_elm.try_into().unwrap(),
         alpha,
         a_slice,
         incx,
-        &mut b_slice,
+        b_slice,
         incy,
     )
 }

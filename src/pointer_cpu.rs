@@ -4,10 +4,8 @@ use crate::pointer_traits::{Mut, Owned, TensorPointer, ToSlice, View, ViewMut};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
-        impl<$lt: Copy> View for $name<$lt> {
-            type AccessOutput = $view<$lt>;
-            type OwnedOutput = $owned<$lt>;
-            fn access_by_offset_region(&self, offset: usize, region: usize) -> Self::AccessOutput {
+        impl<$lt: Copy> View<$view<$lt>, $owned<$lt>> for $name<$lt> {
+            fn access_by_offset_region(&self, offset: usize, region: usize) -> $view<$lt> {
                 if self.is_inbound((offset + region) as isize) {
                     let offset = self.offset + offset;
                     let len = offset + region;
@@ -19,9 +17,9 @@ macro_rules! impl_view {
                 }
             }
 
-            fn to_owned(&self) -> Self::OwnedOutput {
+            fn to_owned(&self) -> $owned<$lt> {
                 let v = self.to_vec();
-                Self::OwnedOutput::from_vec(v)
+                $owned::from_vec(v)
             }
         }
     };
@@ -152,7 +150,7 @@ impl<E> Drop for OwnedCpu<E> {
 }
 
 impl<E: Copy> OwnedCpu<E> {
-    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut [<Self as TensorPointer>::Elem] {
+    pub fn to_slice_mut(&'_ mut self) -> &'_ mut [<Self as TensorPointer>::Elem] {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr().cast_mut(), self.len) }
     }
 }
@@ -289,10 +287,11 @@ impl_view!(ViewMutCpu, ViewCpu, OwnedCpu, E);
 impl_mut!(ViewMutCpu, E);
 impl_cpu!(ViewMutCpu, E);
 
-impl<E: Copy> ViewMut for ViewMutCpu<E> {}
+impl<E: Copy> ViewMut<ViewCpu<E>, OwnedCpu<E>> for ViewMutCpu<E> {}
 
 impl<E: Copy> ViewMutCpu<E> {
-    pub fn to_slice_mut<'a>(&'a self) -> &'a mut [<Self as TensorPointer>::Elem] {
+    #[allow(clippy::mut_from_ref, clippy::wrong_self_convention)]
+    pub fn to_slice_mut(&'_ self) -> &'_ mut [<Self as TensorPointer>::Elem] {
         unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
     }
 }

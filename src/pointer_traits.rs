@@ -32,17 +32,16 @@ pub trait Mut: TensorPointer {
         P: TensorPointer<Elem = <Self as TensorPointer>::Elem>;
 }
 
-pub trait View: TensorPointer {
-    type AccessOutput: View;
-    type OwnedOutput: Owned;
+pub trait View<V: View<V, O>, O: Owned>: TensorPointer {
+    // 返り値がSelfではない理由はViewMutに実装した際にViewMutではなくViewが返り値になってほしいから
+    fn access_by_offset_region(&self, offset: usize, region: usize) -> V;
 
-    fn access_by_offset_region(&self, offset: usize, region: usize) -> Self::AccessOutput;
-
-    fn to_owned(&self) -> Self::OwnedOutput;
+    fn to_owned(&self) -> O;
 }
 
-pub trait ViewMut: View + Mut {}
+pub trait ViewMut<V: View<V, O>, O: Owned>: View<V, O> + Mut {}
 
+/// Impl to Cpu Pointer only
 pub trait ToSlice: TensorPointer {
-    fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem];
+    fn to_slice(&'_ self) -> &'_ [<Self as TensorPointer>::Elem];
 }

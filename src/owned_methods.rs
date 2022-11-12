@@ -69,11 +69,11 @@ impl<E: Copy> CpuTensor<E> {
         }
     }
 
-    pub fn to_slice<'a>(&'a self) -> &'a [E] {
+    pub fn to_slice(&'_ self) -> &'_ [E] {
         self.ptr.to_slice()
     }
 
-    pub fn to_slice_mut<'a>(&'a mut self) -> &'a mut [E] {
+    pub fn to_slice_mut(&'_ mut self) -> &'_ mut [E] {
         self.ptr.to_slice_mut()
     }
 }
