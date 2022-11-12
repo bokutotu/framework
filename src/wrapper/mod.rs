@@ -1,3 +1,9 @@
+#[allow(unused_imports)]
+use std::fmt::Debug;
+
+#[allow(unused_imports)]
+use num_traits::Num;
+
 pub mod cpu_blas;
 
 #[macro_export]
@@ -7,14 +13,14 @@ macro_rules! define_impl {
     };
 
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty)),*), ($($arg:ident : $ty:ty),*)) => {
-        pub trait $trait: Sized {
+        pub trait $trait: Sized + Num + Copy + Debug {
             fn $fn_name($($arg:$ty),*);
         }
         define_impl!(@r $trait, $fn_name, {$(($call_fn, $impl_ty ))*}, ($($arg: $ty),*));
     };
 
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty, $return_ty:ty )),*), ($($arg:ident : $ty:ty),*)) => {
-        pub trait $trait: Sized {
+        pub trait $trait: Sized + Num + Copy + Debug {
             type Out : Sized;
             fn $fn_name($($arg:$ty),*)  -> Self::Out ;
         }

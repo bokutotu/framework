@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+use num_traits::Num;
+
 use crate::define_impl;
 use cblas::*;
 
@@ -30,14 +34,14 @@ define_impl!(
 );
 
 define_impl!(
-    CpyDot,
+    CpuDot,
     cpu_dot,
     ((sdot, f32, f32), (ddot, f64, f64)),
     (n: i32, x: &[Self], incx: i32, y: &[Self], incy: i32)
 );
 
 define_impl!(
-    CpySdot,
+    CpuSdot,
     cpu_sdot,
     ((dsdot, f32, f64)),
     (n: i32, x: &[Self], incx: i32, y: &[Self], incy: i32)
@@ -65,39 +69,39 @@ define_impl!(
     )
 );
 
-define_impl!(
-    CpuRotg,
-    cpu_rotg,
-    ((srotg, f32), (drotg, f64)),
-    (n: &mut Self, b: &mut Self, c: &mut Self, s: &mut [Self])
-);
+// define_impl!(
+//     CpuRotg,
+//     cpu_rotg,
+//     ((srotg, f32), (drotg, f64)),
+//     (n: &mut Self, b: &mut Self, c: &mut Self, s: &mut [Self])
+// );
+//
+// define_impl!(
+//     CpuRotm,
+//     cpu_rotm,
+//     ((srotm, f32), (drotm, f64)),
+//     (
+//         n: i32,
+//         x: &mut [Self],
+//         incx: i32,
+//         y: &mut [Self],
+//         incy: i32,
+//         p: &[Self]
+//     )
+// );
 
-define_impl!(
-    CpuRotm,
-    cpu_rotm,
-    ((srotm, f32), (drotm, f64)),
-    (
-        n: i32,
-        x: &mut [Self],
-        incx: i32,
-        y: &mut [Self],
-        incy: i32,
-        p: &[Self]
-    )
-);
-
-define_impl!(
-    CpuSrotmg,
-    cpu_srotmg,
-    ((srotmg, f32), (drotmg, f64)),
-    (
-        d1: &mut [Self],
-        d2: &mut [Self],
-        b1: &mut [Self],
-        b2: Self,
-        p: &mut [Self]
-    )
-);
+// define_impl!(
+//     CpuSrotmg,
+//     cpu_srotmg,
+//     ((srotmg, f32), (drotmg, f64)),
+//     (
+//         d1: &mut [Self],
+//         d2: &mut [Self],
+//         b1: &mut [Self],
+//         b2: Self,
+//         p: &mut [Self]
+//     )
+// );
 
 define_impl!(
     CpuScal,
@@ -106,12 +110,12 @@ define_impl!(
     (n: i32, alpha: Self, x: &mut [Self], incx: i32)
 );
 
-define_impl!(
-    CpuSwap,
-    cpu_swap,
-    ((sswap, f32), (dswap, f64)),
-    (n: i32, x: &mut [Self], incx: i32, y: &mut [Self], incy: i32)
-);
+// define_impl!(
+//     CpuSwap,
+//     cpu_swap,
+//     ((sswap, f32), (dswap, f64)),
+//     (n: i32, x: &mut [Self], incx: i32, y: &mut [Self], incy: i32)
+// );
 
 define_impl!(
     CpuIamax,
