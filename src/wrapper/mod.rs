@@ -14,6 +14,7 @@ macro_rules! define_impl {
 
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty)),*), ($($arg:ident : $ty:ty),*)) => {
         pub trait $trait: Sized + Num + Copy + Debug {
+            #[allow(clippy::too_many_arguments)]
             fn $fn_name($($arg:$ty),*);
         }
         define_impl!(@r $trait, $fn_name, {$(($call_fn, $impl_ty ))*}, ($($arg: $ty),*));
@@ -22,6 +23,7 @@ macro_rules! define_impl {
     (@define $trait:ident, $fn_name:ident, ($(($call_fn:ident, $impl_ty:ty, $return_ty:ty )),*), ($($arg:ident : $ty:ty),*)) => {
         pub trait $trait: Sized + Num + Copy + Debug {
             type Out : Sized;
+            #[allow(clippy::too_many_arguments)]
             fn $fn_name($($arg:$ty),*)  -> Self::Out ;
         }
         define_impl!(@r $trait, $fn_name, {$(($call_fn, $impl_ty, $return_ty ))*}, ($($arg: $ty),*));

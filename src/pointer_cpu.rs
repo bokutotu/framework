@@ -5,6 +5,7 @@ use crate::pointer_traits::{Mut, Owned, TensorPointer, ToSlice, View, ViewMut};
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
         impl<$lt: Copy> View<$view<$lt>, $owned<$lt>> for $name<$lt> {
+            #[inline]
             fn access_by_offset_region(&self, offset: usize, region: usize) -> $view<$lt> {
                 if self.is_inbound((offset + region) as isize) {
                     let offset = self.offset + offset;
@@ -28,6 +29,7 @@ macro_rules! impl_view {
 macro_rules! impl_mut {
     ( $name:ident, $lt:tt ) => {
         impl<$lt: Copy> Mut for $name<$lt> {
+            #[inline]
             fn assign_region<P>(&mut self, other: &P, offset: usize, region: usize)
             where
                 P: TensorPointer<Elem = <Self as TensorPointer>::Elem>,
@@ -50,6 +52,7 @@ macro_rules! impl_mut {
 macro_rules! impl_cpu {
     ( $name:ident, $lt:tt) => {
         impl<$lt: Copy> ToSlice for $name<$lt> {
+            #[inline]
             fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem] {
                 unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) }
             }
@@ -79,6 +82,7 @@ impl<E> OwnedCpu<E> {
 
 impl<E: Copy> TensorPointer for OwnedCpu<E> {
     type Elem = E;
+    #[inline]
     fn is_inbound(&self, offset: isize) -> bool {
         self.len > offset as usize
     }
@@ -95,19 +99,23 @@ impl<E: Copy> TensorPointer for OwnedCpu<E> {
         Self::from_vec(vec)
     }
 
+    #[inline]
     fn offset(&self, offset: isize) -> NonNull<Self::Elem> {
         self.is_inbound(offset);
         unsafe { NonNull::new_unchecked(self.ptr.as_ptr().offset(offset)) }
     }
 
+    #[inline]
     fn as_ptr(&self) -> *const Self::Elem {
         self.ptr.as_ptr()
     }
 
+    #[inline]
     fn len(&self) -> usize {
         self.len
     }
 
+    #[inline]
     fn offset_num(&self) -> usize {
         0
     }
@@ -150,6 +158,7 @@ impl<E> Drop for OwnedCpu<E> {
 }
 
 impl<E: Copy> OwnedCpu<E> {
+    #[inline]
     pub fn to_slice_mut(&'_ mut self) -> &'_ mut [<Self as TensorPointer>::Elem] {
         unsafe { std::slice::from_raw_parts_mut(self.as_ptr().cast_mut(), self.len) }
     }
@@ -164,6 +173,7 @@ pub struct ViewCpu<E> {
 }
 
 impl<E> ViewCpu<E> {
+    #[inline]
     fn from_nonnull(ptr: NonNull<E>, offset: usize, len: usize, cap: usize) -> ViewCpu<E> {
         if offset >= len {
             panic!("must offset < len");
@@ -180,6 +190,7 @@ impl<E> ViewCpu<E> {
 impl<E: Copy> TensorPointer for ViewCpu<E> {
     type Elem = E;
 
+    #[inline]
     fn is_inbound(&self, offset: isize) -> bool {
         self.len() > offset.try_into().unwrap()
     }
@@ -197,6 +208,7 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
         owned_cpu.to_view(0)
     }
 
+    #[inline]
     fn offset(&self, offset: isize) -> NonNull<Self::Elem> {
         if !self.is_inbound(offset) {
             panic!("offset is out of bound");
@@ -204,14 +216,17 @@ impl<E: Copy> TensorPointer for ViewCpu<E> {
         unsafe { NonNull::new(self.ptr.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
     }
 
+    #[inline]
     fn as_ptr(&self) -> *const Self::Elem {
         unsafe { self.ptr.as_ptr().add(self.offset) }
     }
 
+    #[inline]
     fn len(&self) -> usize {
         self.len - self.offset
     }
 
+    #[inline]
     fn offset_num(&self) -> usize {
         self.offset
     }
@@ -245,6 +260,7 @@ impl<E> ViewMutCpu<E> {
 
 impl<E: Copy> TensorPointer for ViewMutCpu<E> {
     type Elem = E;
+    #[inline]
     fn is_inbound(&self, offset: isize) -> bool {
         self.len() > offset.try_into().unwrap()
     }
@@ -262,6 +278,7 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
         owned_cpu.to_view_mut(0)
     }
 
+    #[inline]
     fn offset(&self, offset: isize) -> NonNull<Self::Elem> {
         if !self.is_inbound(offset) {
             panic!("offset is out of bound");
@@ -269,14 +286,17 @@ impl<E: Copy> TensorPointer for ViewMutCpu<E> {
         unsafe { NonNull::new(self.ptr.as_ptr().offset(offset) as *mut Self::Elem).unwrap() }
     }
 
+    #[inline]
     fn as_ptr(&self) -> *const Self::Elem {
         unsafe { self.ptr.as_ptr().add(self.offset) }
     }
 
+    #[inline]
     fn len(&self) -> usize {
         self.len - self.offset
     }
 
+    #[inline]
     fn offset_num(&self) -> usize {
         self.offset
     }
@@ -290,6 +310,7 @@ impl_cpu!(ViewMutCpu, E);
 impl<E: Copy> ViewMut<ViewCpu<E>, OwnedCpu<E>> for ViewMutCpu<E> {}
 
 impl<E: Copy> ViewMutCpu<E> {
+    #[inline]
     #[allow(clippy::mut_from_ref, clippy::wrong_self_convention)]
     pub fn to_slice_mut(&'_ self) -> &'_ mut [<Self as TensorPointer>::Elem] {
         unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }

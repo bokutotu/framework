@@ -7,6 +7,7 @@ use crate::pointer_traits::{Mut, TensorPointer, ToSlice, View};
 use crate::shape::{cal_offset, Stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, TensorBase};
 
+#[inline]
 fn cpu_shrink_to<P, E>(a: TensorBase<P, E>) -> OwnedCpu<E>
 where
     // P: View<AccessOutput = ViewCpu<E>, OwnedOutput = OwnedCpu<E>> + TensorPointer<Elem = E>,
@@ -41,6 +42,7 @@ where
     P: TensorPointer<Elem = E> + ToSlice + View<ViewCpu<E>, OwnedCpu<E>>,
     E: Copy + Num + Debug,
 {
+    #[inline]
     pub fn into_owned(self) -> CpuTensor<E> {
         if self.stride == self.shape.default_stride() {
             TensorBase {
@@ -63,6 +65,7 @@ where
         }
     }
 
+    #[inline]
     pub fn to_slice(&'_ self) -> &'_ [E] {
         let mut sorted_stride = self.stride.to_vec();
         sorted_stride.sort();
@@ -76,6 +79,7 @@ where
 }
 
 impl<E: Copy> CpuViewMutTensor<E> {
+    #[inline]
     pub fn to_slice_mut(&'_ self) -> &'_ mut [E] {
         let mut sorted_stride = self.stride.to_vec();
         sorted_stride.sort();

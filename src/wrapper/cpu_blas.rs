@@ -5,6 +5,7 @@ use num_traits::Num;
 use crate::define_impl;
 use cblas::*;
 
+// Lebel 1
 define_impl!(
     CpuAsum,
     cpu_asum,
@@ -124,6 +125,8 @@ define_impl!(
     (n: i32, x: &[Self], incx: i32)
 );
 
+// Lebel 2
+
 define_impl!(
     CpuGbmv,
     cpu_gbmv,
@@ -149,14 +152,12 @@ define_impl!(
 define_impl!(
     CpuGemv,
     cpu_gemv,
-    ((sgbmv, f32), (dgbmv, f64)),
+    ((sgemv, f32), (dgemv, f64)),
     (
         layout: Layout,
         transa: Transpose,
         m: i32,
         n: i32,
-        kl: i32,
-        ku: i32,
         alpha: Self,
         a: &[Self],
         lda: i32,

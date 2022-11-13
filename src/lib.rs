@@ -1,6 +1,7 @@
 extern crate cblas;
 extern crate openblas_src;
 
+pub mod blas;
 pub mod graph;
 pub mod index;
 pub mod node;
@@ -10,7 +11,6 @@ pub mod tensor;
 pub mod tensor_methods;
 pub mod view_methods;
 
-mod blas;
 mod pointer_cpu;
 mod pointer_gpu;
 mod pointer_traits;
