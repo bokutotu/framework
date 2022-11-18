@@ -132,6 +132,10 @@ pub fn dot<E: CpuDot<Out = E>>(x: CpuViewTensor<E>, y: CpuViewTensor<E>) -> Opti
     Some(dot_unchecked(x, y, incx, incy))
 }
 
+/// ベクトル同士の内積の値を計算します。計算結果は戻り値として返ってきます。
+/// ?dot_は実数の物にしか提供されていないことに注意してください。
+/// 複素数ベクトルには専用のルーチンが用意されています。
+/// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
 pub fn sdot_unchecked(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>, incx: i32, incy: i32) -> f64 {
     f32::cpu_sdot(
         x.num_elm.try_into().unwrap(),
@@ -142,13 +146,40 @@ pub fn sdot_unchecked(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>, incx: i32, i
     )
 }
 
+/// ベクトル同士の内積の値を計算します。計算結果は戻り値として返ってきます。
+/// ?dot_は実数の物にしか提供されていないことに注意してください。
+/// 複素数ベクトルには専用のルーチンが用意されています。
+/// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
+pub fn sdot(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>) -> Option<f64> {
+    if x.shape().num_dim() != 1 || x.shape() == y.shape() {
+        return None;
+    }
+    let incx = x.stride[0].try_into().unwrap();
+    let incy = y.stride[0].try_into().unwrap();
+    Some(sdot_unchecked(x, y, incx, incy))
+}
+
 /// ベクトルのユークリッドノルム、つまり普通のノルムを計算します。
 /// 結果は戻り値として返ってきます。
 /// 複素数のベクトルを与えた場合でも、実数が返ってくることに注意してください。
 /// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
 /// 行列をベクトルとして渡した場合、フロベニウスノルムが計算できます。
-pub fn nrm2<E: CpuNrm2>(x: CpuViewTensor<E>, incx: i32) -> <E as CpuNrm2>::Out {
+pub fn nrm2_unchecked<E: CpuNrm2>(x: CpuViewTensor<E>, incx: i32) -> <E as CpuNrm2>::Out {
     E::cpu_nrm2(x.num_elm.try_into().unwrap(), x.to_slice(), incx)
+}
+
+/// ベクトルのユークリッドノルム、つまり普通のノルムを計算します。
+/// 結果は戻り値として返ってきます。
+/// 複素数のベクトルを与えた場合でも、実数が返ってくることに注意してください。
+/// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
+/// 行列をベクトルとして渡した場合、フロベニウスノルムが計算できます。
+pub fn nrm2<E: CpuNrm2>(x: CpuViewTensor<E>) -> Option<<E as CpuNrm2>::Out> {
+    if x.shape().num_dim() != 1 {
+        None
+    } else {
+        let incx = x.stride[0].try_into().unwrap();
+        Some(nrm2_unchecked(x, incx))
+    }
 }
 
 /// 長さが同じベクトルX,Yを与えます。
@@ -161,7 +192,7 @@ pub fn nrm2<E: CpuNrm2>(x: CpuViewTensor<E>, incx: i32) -> <E as CpuNrm2>::Out {
 ///
 /// X(i) := c * X(i) + s * Y(i)
 /// Y(i) :=-s * X(i) + c * Y(i)
-pub fn rot<E: CpuRot>(
+pub fn rot_unchecked<E: CpuRot>(
     x: CpuViewMutTensor<E>,
     y: CpuViewMutTensor<E>,
     incx: i32,
@@ -182,16 +213,47 @@ pub fn rot<E: CpuRot>(
 
 /// 与えたベクトルをスカラ倍します。
 /// 複素数のベクトルの場合は、実数倍をする専用のルーチンが用意されています
-pub fn scal<E: CpuScal>(alpha: E, x: CpuViewMutTensor<E>, incx: i32) {
+pub fn scal_unchecked<E: CpuScal>(alpha: E, x: CpuViewMutTensor<E>, incx: i32) {
     E::cpu_scal(x.num_elm.try_into().unwrap(), alpha, x.to_slice_mut(), incx)
+}
+
+/// 与えたベクトルをスカラ倍します。
+/// 複素数のベクトルの場合は、実数倍をする専用のルーチンが用意されています
+pub fn scal<E: CpuScal>(alpha: E, x: CpuViewMutTensor<E>) -> Option<()> {
+    if x.shape().num_dim() != 1 {
+        None
+    } else {
+        let incx = x.stride[0].try_into().unwrap();
+        scal_unchecked(alpha, x, incx);
+        Some(())
+    }
 }
 
 /// ベクトルの中で最小の絶対値を持つ要素の添字を計算します。
 /// 結果は戻り値として返ってきます。
 /// 添字が返ってくるので、当然整数を受け取ることになります。
 /// ただし、この添字は1から始まるので注意してください。0が返ってきたときは、nが不正な場合です。
-pub fn iamax<E: CpuIamax<Out = i32>>(x: CpuViewTensor<E>, incx: i32) -> i32 {
+pub fn iamax_unchecked<E: CpuIamax<Out = i32>>(x: CpuViewTensor<E>, incx: i32) -> i32 {
     E::cpu_iamax(x.num_elm.try_into().unwrap(), x.to_slice(), incx)
+    // let idx = E::cpu_iamax(x.num_elm.try_into().unwrap(), x.to_slice(), incx);
+    // if idx == 0 {
+    //     panic!("aaa");
+    // } else {
+    //     idx - 1
+    // }
+}
+
+/// ベクトルの中で最小の絶対値を持つ要素の添字を計算します。
+/// 結果は戻り値として返ってきます。
+/// 添字が返ってくるので、当然整数を受け取ることになります。
+/// ただし、この添字は1から始まるので注意してください。0が返ってきたときは、nが不正な場合です。
+pub fn iamax<E: CpuIamax<Out = i32>>(x: CpuViewTensor<E>) -> Option<i32> {
+    if x.shape().num_dim() != 1 {
+        None
+    } else {
+        let incx = x.stride[0].try_into().unwrap();
+        Some(iamax_unchecked(x, incx))
+    }
 }
 
 /// バンド形式で格納された一般行列とベクトルの積を計算します。
@@ -199,7 +261,7 @@ pub fn iamax<E: CpuIamax<Out = i32>>(x: CpuViewTensor<E>, incx: i32) -> i32 {
 /// ベクトルが列ベクトルとして解釈される点などに注意してください。
 /// 結果は、渡したベクトルyに格納されます。
 #[allow(clippy::too_many_arguments)]
-pub fn gbmv<E: CpuGbmv>(
+pub fn gbmv_unchecked<E: CpuGbmv>(
     layout: CpuLayout,
     transa: CpuTranspose,
     alpha: E,
@@ -239,7 +301,7 @@ pub fn gbmv<E: CpuGbmv>(
 /// ベクトルが列ベクトルとして解釈される点に注意してください。
 /// 結果は、渡したベクトルyに格納されます。
 #[allow(clippy::too_many_arguments)]
-pub fn gemv<E: CpuGemv>(
+pub fn gemv_unchecked<E: CpuGemv>(
     layout: CpuLayout,
     transa: CpuTranspose,
     alpha: E,
@@ -270,7 +332,17 @@ pub fn gemv<E: CpuGemv>(
     )
 }
 
+/// 一般行列とベクトルの積を計算します。
+/// ベクトルが列ベクトルとして解釈される点に注意してください。
+/// 結果は、渡したベクトルyに格納されます。
 /// 列ベクトルと行ベクトルの積を計算します。結果が行列になって返ってくる点に注意してください。
+// pub fn gemv<E: CpuGemv>(
+//     alpha: E, beta: E, a: CpuViewTensor<E>, x: CpuViewTensor<E>, y: CpuViewMutTensor<E>
+// ) -> Option<()> {
+//     if a.shape().num_dim()
+//     Some(())
+// }
+
 ///  A := alpha * x y^t + A
 ///
 /// Aは行列、x,yはベクトルです。xがm次元,yがn次元のとき、Aはm行n列の行列になります。
@@ -411,7 +483,7 @@ fn nrm2_test_f32() {
     use crate::tensor::CpuTensor;
     let a = vec![3., -4.];
     let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
-    let res = nrm2(a.to_view(), 1);
+    let res = nrm2_unchecked(a.to_view(), 1);
     assert_eq!(res, 5.);
 }
 
@@ -423,7 +495,7 @@ fn rot_test_f32() {
     let b = vec![0., 1.];
     let mut a = CpuTensor::from_vec(a, Shape::new(vec![2]));
     let mut b = CpuTensor::from_vec(b, Shape::new(vec![2]));
-    rot(
+    rot_unchecked(
         a.to_view_mut(),
         b.to_view_mut(),
         1,
@@ -443,18 +515,18 @@ fn scal_test_f32() {
     use crate::tensor::CpuTensor;
     let a = vec![1., 0.];
     let mut a = CpuTensor::from_vec(a, Shape::new(vec![2]));
-    scal(2., a.to_view_mut(), 1);
+    scal_unchecked(2., a.to_view_mut(), 1);
     let a = a.to_vec();
     assert_eq!(a, vec![2., 0.]);
 }
 
 #[test]
-fn amax_test_f32() {
+fn iamax_test_f32() {
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
     let a = vec![0., 1., 2., 3., 4., 5.];
     let a = CpuTensor::from_vec(a, Shape::new(vec![6]));
-    let idx = iamax(a.to_view(), 1);
+    let idx = iamax_unchecked(a.to_view(), 1);
     assert_eq!(idx, 5);
 }
 
@@ -469,7 +541,7 @@ fn gemv_test_f32() {
     let a = CpuTensor::from_vec(a, Shape::new(vec![2, 3]));
     let b = CpuTensor::from_vec(b, Shape::new(vec![2]));
     let mut c = CpuTensor::from_vec(c, Shape::new(vec![3]));
-    gemv(
+    gemv_unchecked(
         CpuLayout::ColumnMajor,
         CpuTranspose::None,
         1.,
