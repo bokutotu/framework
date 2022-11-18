@@ -24,10 +24,11 @@ pub fn asum_unchecked<E: CpuAsum>(a: CpuViewTensor<E>, inc: i32) -> <E as CpuAsu
 /// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
 pub fn asum<E: CpuAsum>(a: CpuViewTensor<E>) -> Option<<E as CpuAsum>::Out> {
     if a.shape().len() != 1 {
-        return None;
+        None
+    } else {
+        let inc = a.stride[0].try_into().unwrap();
+        Some(asum_unchecked(a, inc))
     }
-    let inc = a.stride[0].try_into().unwrap();
-    Some(asum_unchecked(a, inc))
 }
 
 /// ベクトル同士の加算を行います。
@@ -59,12 +60,12 @@ pub fn axpy_uncheckd<E: CpuAxpy>(
 /// Y := alpha * X + Y
 pub fn axpy<E: CpuAxpy>(alpha: E, a: CpuViewTensor<E>, b: CpuViewMutTensor<E>) -> Option<()> {
     if a.shape() != b.shape() || a.shape().len() != 1 {
-        return None;
+        None
     } else {
         let incx = a.stride[0].try_into().unwrap();
         let incy = b.stride[0].try_into().unwrap();
         axpy_uncheckd(alpha, incx, incy, a, b);
-        return Some(());
+        Some(())
     }
 }
 
@@ -122,7 +123,7 @@ pub fn dot_unchecked<E: CpuDot<Out = E>>(
 /// ?dot_は実数の物にしか提供されていないことに注意してください。
 /// 複素数ベクトルには専用のルーチンが用意されています。
 /// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
-pub fn dot<E: CpuDot<Out=E>>(x: CpuViewTensor<E>, y: CpuViewTensor<E>) -> Option<E> {
+pub fn dot<E: CpuDot<Out = E>>(x: CpuViewTensor<E>, y: CpuViewTensor<E>) -> Option<E> {
     if x.shape().num_dim() != 1 || x.shape() == y.shape() {
         return None;
     }

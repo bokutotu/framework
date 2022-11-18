@@ -56,7 +56,7 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     pub fn is_fortran_stride(&self) -> bool {
         let dim = self.shape();
         let num_dim = dim.num_dim();
-        dim[num_dim-2] > dim[num_dim-1]
+        dim[num_dim - 2] > dim[num_dim - 1]
     }
 }
 
