@@ -41,4 +41,30 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     pub fn shape_vec(&self) -> Vec<isize> {
         self.shape.clone().to_vec()
     }
+
+    /// Change SHAPE to the one entered. stride is changed to the default stride
+    #[inline]
+    pub fn reshape(&mut self, shape: Shape) {
+        if shape.num_elms() != self.shape().num_elms() {
+            panic!("The input shape and the number of elements in the sensor do not match.");
+        }
+        self.stride = shape.default_stride();
+        self.shape = shape;
+    }
+
+    #[inline]
+    pub fn is_fortran_stride(&self) -> bool {
+        let dim = self.shape();
+        let num_dim = dim.num_dim();
+        dim[num_dim-2] > dim[num_dim-1]
+    }
+}
+
+#[test]
+#[should_panic]
+fn reshape_test() {
+    use crate::tensor::CpuTensor;
+    let a = vec![10, 20, 30];
+    let mut a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    a.reshape(Shape::new(vec![100000]));
 }

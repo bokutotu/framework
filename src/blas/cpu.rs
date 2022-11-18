@@ -1,29 +1,40 @@
 use std::convert::TryInto;
-/// warning: このファイルでwrapされるblasはshapeに関する一切のcheckを行いません。
-use std::fmt::Debug;
+// use std::fmt::Debug;
 
 use crate::tensor::{CpuViewMutTensor, CpuViewTensor};
 use crate::wrapper::cpu_blas::*;
 
 use super::{CpuLayout, CpuTranspose};
 
-use num_traits::Num;
+// use num_traits::Num;
 
 /// ベクトルの各成分の絶対値を合計した値を計算します。
 /// 結果は戻り値として返ってきます。
 /// 複素数のベクトルを与えた場合でも、絶対値の合計ですので、実数が返ってくることに注意してください。
 /// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
-pub fn asum<E: CpuAsum>(a: CpuViewTensor<E>, inc: i32) -> <E as CpuAsum>::Out {
+pub fn asum_unchecked<E: CpuAsum>(a: CpuViewTensor<E>, inc: i32) -> <E as CpuAsum>::Out {
     let num_elm = a.num_elm as i32;
     let ptr = unsafe { std::slice::from_raw_parts(a.as_ptr(), a.num_elm) };
     E::cpu_asum(num_elm, ptr, inc)
+}
+
+/// ベクトルの各成分の絶対値を合計した値を計算します。
+/// 結果は戻り値として返ってきます。
+/// 複素数のベクトルを与えた場合でも、絶対値の合計ですので、実数が返ってくることに注意してください。
+/// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
+pub fn asum<E: CpuAsum>(a: CpuViewTensor<E>) -> Option<<E as CpuAsum>::Out> {
+    if a.shape().len() != 1 {
+        return None;
+    }
+    let inc = a.stride[0].try_into().unwrap();
+    Some(asum_unchecked(a, inc))
 }
 
 /// ベクトル同士の加算を行います。
 /// 行列も大きさが非常に長いベクトルだと思えば使えます。
 /// 与えたベクトルYの内容は破壊され、計算結果が書きこまれます。
 /// Y := alpha * X + Y
-pub fn axpy<E: CpuAxpy + Copy + Num + Debug>(
+pub fn axpy_uncheckd<E: CpuAxpy>(
     alpha: E,
     incx: i32,
     incy: i32,
@@ -42,22 +53,57 @@ pub fn axpy<E: CpuAxpy + Copy + Num + Debug>(
     )
 }
 
+/// ベクトル同士の加算を行います。
+/// 行列も大きさが非常に長いベクトルだと思えば使えます。
+/// 与えたベクトルYの内容は破壊され、計算結果が書きこまれます。
+/// Y := alpha * X + Y
+pub fn axpy<E: CpuAxpy>(alpha: E, a: CpuViewTensor<E>, b: CpuViewMutTensor<E>) -> Option<()> {
+    if a.shape() != b.shape() || a.shape().len() != 1 {
+        return None;
+    } else {
+        let incx = a.stride[0].try_into().unwrap();
+        let incy = b.stride[0].try_into().unwrap();
+        axpy_uncheckd(alpha, incx, incy, a, b);
+        return Some(());
+    }
+}
+
 /// ベクトルをXからYにコピーします。行列も大きさが非常に長いベクトルだと思えば使えます。
 /// 与えたベクトルYの内容は破壊され、内容がXになります。
 /// 単なるコピー演算なので、自力で書いてもそこまで違わないのではないか、
 /// と思われるかもしれませんが、若干何故か速いことがあるようです。
 /// アラインメントの関係などのあたりでうまく最適化してるのだろうなと想像しています。
-pub fn copy<E: CpuCopy>(incx: i32, incy: i32, x: CpuViewTensor<E>, y: CpuViewMutTensor<E>) {
+pub fn copy_unchecked<E: CpuCopy>(
+    incx: i32,
+    incy: i32,
+    x: CpuViewTensor<E>,
+    y: CpuViewMutTensor<E>,
+) {
     let x_slice = x.to_slice();
     let y_slice = y.to_slice_mut();
     E::cpu_copy(x.num_elm.try_into().unwrap(), x_slice, incx, y_slice, incy)
+}
+
+/// ベクトルをXからYにコピーします。行列も大きさが非常に長いベクトルだと思えば使えます。
+/// 与えたベクトルYの内容は破壊され、内容がXになります。
+/// 単なるコピー演算なので、自力で書いてもそこまで違わないのではないか、
+/// と思われるかもしれませんが、若干何故か速いことがあるようです。
+/// アラインメントの関係などのあたりでうまく最適化してるのだろうなと想像しています。
+pub fn copy<E: CpuCopy>(x: CpuViewTensor<E>, y: CpuViewMutTensor<E>) -> Option<()> {
+    if x.shape.num_dim() != 1 || x.shape() != y.shape() {
+        return None;
+    }
+    let incx = x.stride[0].try_into().unwrap();
+    let incy = y.stride[0].try_into().unwrap();
+    copy_unchecked(incx, incy, x, y);
+    Some(())
 }
 
 /// ベクトル同士の内積の値を計算します。計算結果は戻り値として返ってきます。
 /// ?dot_は実数の物にしか提供されていないことに注意してください。
 /// 複素数ベクトルには専用のルーチンが用意されています。
 /// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
-pub fn dot<E: CpuDot<Out = E>>(
+pub fn dot_unchecked<E: CpuDot<Out = E>>(
     x: CpuViewTensor<E>,
     y: CpuViewTensor<E>,
     incx: i32,
@@ -72,7 +118,20 @@ pub fn dot<E: CpuDot<Out = E>>(
     )
 }
 
-pub fn sdot(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>, incx: i32, incy: i32) -> f64 {
+/// ベクトル同士の内積の値を計算します。計算結果は戻り値として返ってきます。
+/// ?dot_は実数の物にしか提供されていないことに注意してください。
+/// 複素数ベクトルには専用のルーチンが用意されています。
+/// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
+pub fn dot<E: CpuDot<Out=E>>(x: CpuViewTensor<E>, y: CpuViewTensor<E>) -> Option<E> {
+    if x.shape().num_dim() != 1 || x.shape() == y.shape() {
+        return None;
+    }
+    let incx = x.stride[0].try_into().unwrap();
+    let incy = y.stride[0].try_into().unwrap();
+    Some(dot_unchecked(x, y, incx, incy))
+}
+
+pub fn sdot_unchecked(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>, incx: i32, incy: i32) -> f64 {
     f32::cpu_sdot(
         x.num_elm.try_into().unwrap(),
         x.to_slice(),
@@ -284,7 +343,7 @@ fn asum_test_f32() {
         v.push(i as f32);
     }
     let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![1_000_000_000]));
-    let res = asum(a.to_view(), 1);
+    let res = asum_unchecked(a.to_view(), 1);
     let ans = v.iter().fold(0., |x, y| x + y);
     assert_eq!(ans, res);
 }
@@ -303,7 +362,7 @@ fn axpy_test_f32() {
     }
     let a = CpuTensor::from_vec(a, Shape::new(vec![10, 100]));
     let mut b = CpuTensor::from_vec(b, Shape::new(vec![10, 100]));
-    axpy(1., 1, 1, a.to_view(), b.to_view_mut());
+    axpy_uncheckd(1., 1, 1, a.to_view(), b.to_view_mut());
     let res = b.to_vec();
     assert_eq!(res, c);
 }
@@ -316,7 +375,7 @@ fn copy_test_f32() {
     let b = vec![0., 0., 0.];
     let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
     let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
-    copy(1, 1, a.to_view(), b.to_view_mut());
+    copy_unchecked(1, 1, a.to_view(), b.to_view_mut());
     let b = b.to_vec();
     assert_eq!(vec![0., 1., 2.], b);
 }
@@ -329,7 +388,7 @@ fn dot_test_f32() {
     let b = vec![2., 3., 4.];
     let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
     let b = CpuTensor::from_vec(b, Shape::new(vec![3]));
-    let res = dot(a.to_view(), b.to_view(), 1, 1);
+    let res = dot_unchecked(a.to_view(), b.to_view(), 1, 1);
     assert_eq!(res, 13.)
 }
 
@@ -341,7 +400,7 @@ fn sdot_test_f32() {
     let b = vec![2., 3., 4.];
     let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
     let b = CpuTensor::from_vec(b, Shape::new(vec![3]));
-    let res = sdot(a.to_view(), b.to_view(), 1, 1);
+    let res = sdot_unchecked(a.to_view(), b.to_view(), 1, 1);
     assert_eq!(res, 13.)
 }
 

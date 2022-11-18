@@ -37,6 +37,10 @@ impl Shape {
     pub fn to_shape_iter(&self) -> ShapeIter {
         ShapeIter::new(self.clone())
     }
+
+    pub fn num_dim(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl Deref for Shape {

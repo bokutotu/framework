@@ -2,7 +2,7 @@ use std::convert::From;
 
 use cblas::{Layout, Transpose};
 
-pub(crate) mod cpu;
+pub mod cpu;
 
 #[repr(C)]
 pub enum CpuLayout {
