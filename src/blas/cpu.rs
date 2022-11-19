@@ -336,19 +336,42 @@ pub fn gemv_unchecked<E: CpuGemv>(
 /// ベクトルが列ベクトルとして解釈される点に注意してください。
 /// 結果は、渡したベクトルyに格納されます。
 /// 列ベクトルと行ベクトルの積を計算します。結果が行列になって返ってくる点に注意してください。
-// pub fn gemv<E: CpuGemv>(
-//     alpha: E, beta: E, a: CpuViewTensor<E>, x: CpuViewTensor<E>, y: CpuViewMutTensor<E>
-// ) -> Option<()> {
-//     if a.shape().num_dim()
-//     Some(())
-// }
+/// y := alpha * Ax + beta * y
+pub fn gemv<E: CpuGemv>(
+    alpha: E,
+    beta: E,
+    transa: CpuTranspose,
+    a: CpuViewTensor<E>,
+    x: CpuViewTensor<E>,
+    y: CpuViewMutTensor<E>,
+) -> Option<()> {
+    if a.shape.num_dim() != 2
+        || x.shape.num_dim() != 1
+        || y.shape.num_dim() != 1
+        || a.shape[0] != x.shape[0]
+        || a.shape[1] != y.shape[0]
+        || *a.stride.iter().min().unwrap() != 1
+    {
+        None
+    } else {
+        let layout = if a.is_column_major() {
+            CpuLayout::ColumnMajor
+        } else {
+            CpuLayout::RowMajor
+        };
+        let incx = x.stride[0].try_into().unwrap();
+        let incy = y.stride[0].try_into().unwrap();
+        gemv_unchecked(layout, transa, alpha, beta, a, x, y, incx, incy);
+        Some(())
+    }
+}
 
 ///  A := alpha * x y^t + A
 ///
 /// Aは行列、x,yはベクトルです。xがm次元,yがn次元のとき、Aはm行n列の行列になります。
-/// GEMMなどと違い、Aにスから倍がないため、
+/// GEMMなどと違い、Aにscala倍がないため、
 /// 予め0クリアするなど処理を行なっておく必要がある点に注意してください。
-pub fn ger<E: CpuGer>(
+pub fn ger_unchecked<E: CpuGer>(
     layout: CpuLayout,
     alpha: E,
     x: CpuViewTensor<E>,
@@ -373,10 +396,38 @@ pub fn ger<E: CpuGer>(
     );
 }
 
+///  A := alpha * x y^t + A
+///
+/// Aは行列、x,yはベクトルです。xがm次元,yがn次元のとき、Aはm行n列の行列になります。
+/// GEMMなどと違い、Aにスから倍がないため、
+/// 予め0クリアするなど処理を行なっておく必要がある点に注意してください。
+pub fn ger<E: CpuGer>(
+    layout: CpuLayout,
+    alpha: E,
+    x: CpuViewTensor<E>,
+    y: CpuViewTensor<E>,
+    a: CpuViewMutTensor<E>,
+) -> Option<()> {
+    if x.shape.len() != 1
+        || y.shape.len() != 1
+        || a.shape.len() != 2
+        || *x.stride.iter().min().unwrap() != 1
+        || a.shape[1] != y.shape[0]
+        || a.shape[0] != x.shape[0]
+    {
+        None
+    } else {
+        let incx = x.stride[0].try_into().unwrap();
+        let incy = y.stride[0].try_into().unwrap();
+        ger_unchecked(layout, alpha, x, y, a, incx, incy);
+        Some(())
+    }
+}
+
 /// 一般行列と一般行列の積を計算します。
 /// 結果を別途渡した行列にスカラ倍したものを加算します（詳しくは計算式参照）
 #[allow(clippy::too_many_arguments)]
-pub fn gemm<E: CpuGemm>(
+pub fn gemm_unchecked<E: CpuGemm>(
     layout: CpuLayout,
     transa: CpuTranspose,
     transb: CpuTranspose,
@@ -405,6 +456,34 @@ pub fn gemm<E: CpuGemm>(
         c.to_slice_mut(),
         m,
     );
+}
+
+/// 一般行列と一般行列の積を計算します。
+/// 結果を別途渡した行列にスカラ倍したものを加算します（詳しくは計算式参照）
+pub fn gemm<E: CpuGemm>(
+    transa: CpuTranspose,
+    transb: CpuTranspose,
+    alpha: E,
+    beta: E,
+    a: CpuViewTensor<E>,
+    b: CpuViewTensor<E>,
+    c: CpuViewMutTensor<E>,
+) -> Option<()> {
+    // shape len check
+    if a.shape.len() != 2 || b.shape.len() != 2 || c.shape.len() != 2
+        // input shape shape is collect check
+        || a.shape[0] != c.shape[0] || b.shape[0] != a.shape[1] || b.shape[1] != c.shape[1]
+        // a, b and c must be column major
+        || !c.is_column_major() || !a.is_column_major() || !b.is_column_major() ||
+        // a, b, and c's smallest stride must be 1
+        *a.stride.iter().min().unwrap() != 1 || *b.stride.iter().min().unwrap() != 1 ||
+        *c.stride.iter().min().unwrap() != 1
+    {
+        None
+    } else {
+        gemm_unchecked(CpuLayout::ColumnMajor, transa, transb, alpha, beta, a, b, c);
+        Some(())
+    }
 }
 
 #[test]
@@ -565,7 +644,7 @@ fn ger_test_f32() {
     let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
     let b = CpuTensor::from_vec(b, Shape::new(vec![3]));
     let mut c = CpuTensor::from_vec(c, Shape::new(vec![3, 3]));
-    ger(
+    ger_unchecked(
         CpuLayout::RowMajor,
         1.,
         a.to_view(),
@@ -591,8 +670,8 @@ fn gemm_test_f32() {
     let c = vec![2.0, 7.0, 6.0, 2.0, 0.0, 7.0, 4.0, 2.0];
     let a = CpuTensor::from_vec(a, Shape::new(vec![2, 3]));
     let b = CpuTensor::from_vec(b, Shape::new(vec![3, 4]));
-    let mut c = CpuTensor::from_vec(c, Shape::new(vec![2, 3]));
-    gemm(
+    let mut c = CpuTensor::from_vec(c, Shape::new(vec![2, 4]));
+    gemm_unchecked(
         CpuLayout::ColumnMajor,
         CpuTranspose::None,
         CpuTranspose::None,

@@ -1,7 +1,7 @@
 use std::ptr::NonNull;
 
 use crate::pointer_traits::TensorPointer;
-use crate::shape::Shape;
+use crate::shape::{Shape, Stride};
 use crate::tensor::TensorBase;
 
 impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
@@ -53,10 +53,20 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     }
 
     #[inline]
-    pub fn is_fortran_stride(&self) -> bool {
+    pub fn is_column_major(&self) -> bool {
         let dim = self.shape();
         let num_dim = dim.num_dim();
         dim[num_dim - 2] > dim[num_dim - 1]
+    }
+
+    #[inline]
+    pub fn stride(&self) -> Stride {
+        self.stride.clone()
+    }
+
+    #[inline]
+    pub fn stride_vec(&self) -> Vec<isize> {
+        self.stride().to_vec()
     }
 }
 
