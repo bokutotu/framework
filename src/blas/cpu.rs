@@ -494,7 +494,7 @@ fn asum_test_f32() {
     for i in 0..1_000 {
         v.push(i as f32);
     }
-    let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![1_000_000_000]));
+    let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![1_000]));
     let res = asum_unchecked(a.to_view(), 1);
     let ans = v.iter().fold(0., |x, y| x + y);
     assert_eq!(ans, res);
@@ -561,7 +561,7 @@ fn nrm2_test_f32() {
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
     let a = vec![3., -4.];
-    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let a = CpuTensor::from_vec(a, Shape::new(vec![2]));
     let res = nrm2_unchecked(a.to_view(), 1);
     assert_eq!(res, 5.);
 }

@@ -9,6 +9,9 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
         let num_elm = v.len();
         let ptr = P::from_vec(v);
         let stride = shape.default_stride();
+        if num_elm != shape.num_elms() {
+            panic!("shape is not collect");
+        }
         TensorBase {
             ptr,
             shape,
@@ -77,4 +80,12 @@ fn reshape_test() {
     let a = vec![10, 20, 30];
     let mut a = CpuTensor::from_vec(a, Shape::new(vec![3]));
     a.reshape(Shape::new(vec![100000]));
+}
+
+#[test]
+#[should_panic]
+fn from_vec_panic() {
+    use crate::tensor::CpuTensor;
+    let a = vec![1., 2., 3., 4., 5.];
+    let _ = CpuTensor::from_vec(a, Shape::new(vec![1, 2, 3, 4]));
 }
