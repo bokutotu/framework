@@ -71,6 +71,11 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     pub fn stride_vec(&self) -> Vec<isize> {
         self.stride().to_vec()
     }
+
+    #[inline]
+    pub fn num_elms(&self) -> usize {
+        self.shape.num_elms()
+    }
 }
 
 #[test]

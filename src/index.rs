@@ -121,11 +121,11 @@ macro_rules! index {
     };
 
     (@parse [$($stack:tt)*] $range:expr;$step:expr, $($t:tt)*) => {
-                index!(@parse [$($stack)* $index!(@convert $range $step)] $($t)*)
+        index!(@parse [$($stack)* index!(@convert $range, $step),] $($t)*)
     };
 
     (@parse [$($stack:tt)*] $range:expr, $($t:tt)*) => {
-                index!(@parse [$($stack)* index!(@convert $range), ] $($t)*)
+        index!(@parse [$($stack)* index!(@convert $range), ] $($t)*)
     };
 
     (@parse [] ) => {
@@ -198,6 +198,26 @@ fn index_test_full() {
 fn index_test_2d() {
     let index = index![1..2, ..3];
     let v = vec![Inner::new(1, Some(1), 1), Inner::new(0, Some(2), 1)];
+    let ans = TensorIndex::from(v);
+    assert_eq!(ans, index);
+}
+
+#[test]
+fn index_test_2d_fullrange_with_stride() {
+    let index = index![..;2, ..;2];
+    let v = vec![Inner::new(0, Some(-1), 2), Inner::new(0, Some(-1), 2)];
+    let ans = TensorIndex::from(v);
+    assert_eq!(ans, index);
+}
+
+#[test]
+fn index_test_3d() {
+    let index = index![1..2, ..3, ..];
+    let v = vec![
+        Inner::new(1, Some(1), 1),
+        Inner::new(0, Some(2), 1),
+        Inner::new(0, Some(-1), 1),
+    ];
     let ans = TensorIndex::from(v);
     assert_eq!(ans, index);
 }

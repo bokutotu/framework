@@ -60,32 +60,19 @@ macro_rules! impl_cpu {
     };
 }
 
+/// CPUにデータを確保されたポインタ。データの所有権を持っている。
 #[repr(C)]
 pub struct OwnedCpu<E> {
+    /// 確保された先頭部分のポインタ
     ptr: NonNull<E>,
+    /// 確保されているポインタの長さ
     len: usize,
+    /// Vecのcapに当たるもの
     cap: usize,
-}
-
-impl<E> OwnedCpu<E> {
-    fn from_vec(vec: Vec<E>) -> Self {
-        let mut vec = vec;
-        let (ptr, len, cap) = (
-            NonNull::new(vec.as_mut_ptr()).expect("Failed to get Pointer for Vec"),
-            vec.len(),
-            vec.capacity(),
-        );
-        std::mem::forget(vec);
-        Self { ptr, len, cap }
-    }
 }
 
 impl<E: Copy> TensorPointer for OwnedCpu<E> {
     type Elem = E;
-    #[inline]
-    fn is_inbound(&self, offset: isize) -> bool {
-        self.len > offset as usize
-    }
 
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
@@ -96,7 +83,14 @@ impl<E: Copy> TensorPointer for OwnedCpu<E> {
     }
 
     fn from_vec(vec: Vec<Self::Elem>) -> Self {
-        Self::from_vec(vec)
+        let mut vec = vec;
+        let (ptr, len, cap) = (
+            NonNull::new(vec.as_mut_ptr()).expect("Failed to get Pointer for Vec"),
+            vec.len(),
+            vec.capacity(),
+        );
+        std::mem::forget(vec);
+        Self { ptr, len, cap }
     }
 
     #[inline]
@@ -190,11 +184,6 @@ impl<E> ViewCpu<E> {
 impl<E: Copy> TensorPointer for ViewCpu<E> {
     type Elem = E;
 
-    #[inline]
-    fn is_inbound(&self, offset: isize) -> bool {
-        self.len() > offset.try_into().unwrap()
-    }
-
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
         let v = unsafe { Vec::from_raw_parts(self.ptr.as_ptr(), self.len, self.cap) };
@@ -260,10 +249,6 @@ impl<E> ViewMutCpu<E> {
 
 impl<E: Copy> TensorPointer for ViewMutCpu<E> {
     type Elem = E;
-    #[inline]
-    fn is_inbound(&self, offset: isize) -> bool {
-        self.len() > offset.try_into().unwrap()
-    }
 
     #[allow(clippy::redundant_clone)]
     fn to_vec(&self) -> Vec<Self::Elem> {
@@ -313,7 +298,7 @@ impl<E: Copy> ViewMutCpu<E> {
     #[inline]
     #[allow(clippy::mut_from_ref, clippy::wrong_self_convention)]
     pub fn to_slice_mut(&'_ self) -> &'_ mut [<Self as TensorPointer>::Elem] {
-        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
+        unsafe { std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len()) }
     }
 }
 

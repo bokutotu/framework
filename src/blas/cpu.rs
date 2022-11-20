@@ -13,9 +13,9 @@ use super::{CpuLayout, CpuTranspose};
 /// 複素数のベクトルを与えた場合でも、絶対値の合計ですので、実数が返ってくることに注意してください。
 /// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
 pub fn asum_unchecked<E: CpuAsum>(a: CpuViewTensor<E>, inc: i32) -> <E as CpuAsum>::Out {
-    let num_elm = a.num_elm as i32;
-    let ptr = unsafe { std::slice::from_raw_parts(a.as_ptr(), a.num_elm) };
-    E::cpu_asum(num_elm, ptr, inc)
+    let num_elm = a.num_elms() as i32;
+    let a_slice = a.to_slice();
+    E::cpu_asum(num_elm, a_slice, inc)
 }
 
 /// ベクトルの各成分の絶対値を合計した値を計算します。
@@ -45,7 +45,7 @@ pub fn axpy_uncheckd<E: CpuAxpy>(
     let a_slice = a.to_slice();
     let b_slice = b.to_slice_mut();
     E::cpu_axpy(
-        a.num_elm.try_into().unwrap(),
+        a.num_elms().try_into().unwrap(),
         alpha,
         a_slice,
         incx,
@@ -82,7 +82,13 @@ pub fn copy_unchecked<E: CpuCopy>(
 ) {
     let x_slice = x.to_slice();
     let y_slice = y.to_slice_mut();
-    E::cpu_copy(x.num_elm.try_into().unwrap(), x_slice, incx, y_slice, incy)
+    E::cpu_copy(
+        x.num_elms().try_into().unwrap(),
+        x_slice,
+        incx,
+        y_slice,
+        incy,
+    )
 }
 
 /// ベクトルをXからYにコピーします。行列も大きさが非常に長いベクトルだと思えば使えます。
@@ -111,7 +117,7 @@ pub fn dot_unchecked<E: CpuDot<Out = E>>(
     incy: i32,
 ) -> E {
     E::cpu_dot(
-        x.num_elm.try_into().unwrap(),
+        x.num_elms().try_into().unwrap(),
         x.to_slice(),
         incx,
         y.to_slice(),
@@ -138,7 +144,7 @@ pub fn dot<E: CpuDot<Out = E>>(x: CpuViewTensor<E>, y: CpuViewTensor<E>) -> Opti
 /// （若干マニアックですが）行列の内積(tr(XY^t))も大きさが非常に長いベクトルだと思えば使えます。
 pub fn sdot_unchecked(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>, incx: i32, incy: i32) -> f64 {
     f32::cpu_sdot(
-        x.num_elm.try_into().unwrap(),
+        x.num_elms().try_into().unwrap(),
         x.to_slice(),
         incx,
         y.to_slice(),
@@ -165,7 +171,7 @@ pub fn sdot(x: CpuViewTensor<f32>, y: CpuViewTensor<f32>) -> Option<f64> {
 /// 例えば、doublecomplexのベクトルを与えた場合は、doubleで受け取る、などです。
 /// 行列をベクトルとして渡した場合、フロベニウスノルムが計算できます。
 pub fn nrm2_unchecked<E: CpuNrm2>(x: CpuViewTensor<E>, incx: i32) -> <E as CpuNrm2>::Out {
-    E::cpu_nrm2(x.num_elm.try_into().unwrap(), x.to_slice(), incx)
+    E::cpu_nrm2(x.num_elms().try_into().unwrap(), x.to_slice(), incx)
 }
 
 /// ベクトルのユークリッドノルム、つまり普通のノルムを計算します。
@@ -201,7 +207,7 @@ pub fn rot_unchecked<E: CpuRot>(
     s: E,
 ) {
     E::cpu_rot(
-        x.num_elm.try_into().unwrap(),
+        x.num_elms().try_into().unwrap(),
         x.to_slice_mut(),
         incx,
         y.to_slice_mut(),
@@ -214,7 +220,12 @@ pub fn rot_unchecked<E: CpuRot>(
 /// 与えたベクトルをスカラ倍します。
 /// 複素数のベクトルの場合は、実数倍をする専用のルーチンが用意されています
 pub fn scal_unchecked<E: CpuScal>(alpha: E, x: CpuViewMutTensor<E>, incx: i32) {
-    E::cpu_scal(x.num_elm.try_into().unwrap(), alpha, x.to_slice_mut(), incx)
+    E::cpu_scal(
+        x.num_elms().try_into().unwrap(),
+        alpha,
+        x.to_slice_mut(),
+        incx,
+    )
 }
 
 /// 与えたベクトルをスカラ倍します。
@@ -234,7 +245,7 @@ pub fn scal<E: CpuScal>(alpha: E, x: CpuViewMutTensor<E>) -> Option<()> {
 /// 添字が返ってくるので、当然整数を受け取ることになります。
 /// ただし、この添字は1から始まるので注意してください。0が返ってきたときは、nが不正な場合です。
 pub fn iamax_unchecked<E: CpuIamax<Out = i32>>(x: CpuViewTensor<E>, incx: i32) -> i32 {
-    E::cpu_iamax(x.num_elm.try_into().unwrap(), x.to_slice(), incx)
+    E::cpu_iamax(x.num_elms().try_into().unwrap(), x.to_slice(), incx)
     // let idx = E::cpu_iamax(x.num_elm.try_into().unwrap(), x.to_slice(), incx);
     // if idx == 0 {
     //     panic!("aaa");
@@ -520,7 +531,7 @@ fn axpy_test_f32() {
 }
 
 #[test]
-fn copy_test_f32() {
+fn copy_unchecked_test_f32() {
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
     let a = vec![0., 1., 2.];
@@ -557,7 +568,7 @@ fn sdot_test_f32() {
 }
 
 #[test]
-fn nrm2_test_f32() {
+fn nrm2_unchecked_test_f32() {
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
     let a = vec![3., -4.];
@@ -600,7 +611,7 @@ fn scal_test_f32() {
 }
 
 #[test]
-fn iamax_test_f32() {
+fn iamax_unchecked_test_f32() {
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
     let a = vec![0., 1., 2., 3., 4., 5.];
@@ -610,7 +621,7 @@ fn iamax_test_f32() {
 }
 
 #[test]
-fn gemv_test_f32() {
+fn gemv_unchecked_test_f32() {
     use super::{CpuLayout, CpuTranspose};
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
@@ -634,7 +645,7 @@ fn gemv_test_f32() {
 }
 
 #[test]
-fn ger_test_f32() {
+fn ger_unchecked_test_f32() {
     use super::CpuLayout;
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
@@ -659,7 +670,7 @@ fn ger_test_f32() {
 }
 
 #[test]
-fn gemm_test_f32() {
+fn gemm_unchanged_test_f32() {
     use super::{CpuLayout, CpuTranspose};
     use crate::shape::Shape;
     use crate::tensor::CpuTensor;
@@ -683,4 +694,165 @@ fn gemm_test_f32() {
     );
     let c = c.to_vec();
     assert_eq!(c, vec![40.0, 90.0, 50.0, 100.0, 50.0, 120.0, 60.0, 130.0,]);
+}
+
+#[test]
+fn asum_f64_test_failed_by_shape_len() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![1, 3]));
+    let res = asum(a.to_view());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn asum_f64_test() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let res = asum(a.to_view());
+    assert_eq!(res, Some(3.));
+}
+
+#[test]
+fn axpy_f64_test_failed_by_shape_1() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![1, 3]));
+    let b = vec![0., 2., 3.];
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
+    let res = axpy(1., a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn axpy_f64_test_failed_by_shape_2() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let b = vec![0., 2., 3.];
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3, 1]));
+    let res = axpy(1., a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn axpy_f64_test_failed_by_shape_3() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2., 3.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![4]));
+    let b = vec![0., 2., 3.];
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
+    let res = axpy(1., a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn axpy_f64_test_failed_by_shape_4() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3, 1]));
+    let b = vec![0., 2., 3.];
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3, 1]));
+    let res = axpy(1., a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn axpy_f64_test() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let b = vec![0., 2., 3.];
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
+    let res = axpy(1., a.to_view(), b.to_view_mut());
+    assert_eq!(res, Some(()));
+    let b = b.to_vec();
+    assert_eq!(b, [0., 3., 5.]);
+}
+
+#[test]
+fn axpy_f64_test_with_stride() {
+    use crate::index;
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3., 4.];
+    let b = vec![5., 6., 7., 8.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![4]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![4]));
+    let a_slice = a.slice(index![..;2]);
+    let b_slice = b.slice_mut(index![..;2]);
+    let res = axpy(1., a_slice, b_slice);
+    assert_eq!(res, Some(()));
+    let b = b.to_vec();
+    assert_eq!(b, [5., 6., 10., 8.]);
+}
+
+#[test]
+fn copy_f64_test_failed_by_shape_1() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3.];
+    let b = vec![0., 0., 0., 0.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![4]));
+    let res = copy(a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn copy_f64_test_failed_by_shape_2() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3.];
+    let b = vec![0., 0., 0.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3, 1]));
+    let res = copy(a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn copy_f64_test_failed_by_shape_3() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3.];
+    let b = vec![0., 0., 0.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3, 1]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3, 1]));
+    let res = copy(a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn copy_f64_test_failed_by_shape_4() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3.];
+    let b = vec![0., 0., 0.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3, 1]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
+    let res = copy(a.to_view(), b.to_view_mut());
+    assert_eq!(res, None);
+}
+
+#[test]
+fn copy_f64_test() {
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 3.];
+    let b = vec![0., 0., 0.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![3]));
+    let mut b = CpuTensor::from_vec(b, Shape::new(vec![3]));
+    let res = copy(a.to_view(), b.to_view_mut());
+    assert_eq!(res, Some(()));
+    let b = b.to_vec();
+    assert_eq!(b, [0., 1., 3.]);
 }

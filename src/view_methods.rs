@@ -1,10 +1,11 @@
+use std::convert::TryInto;
 use std::fmt::Debug;
 
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
 use crate::pointer_traits::{Mut, TensorPointer, ToSlice, View};
-use crate::shape::{cal_offset, Stride};
+use crate::shape::cal_offset;
 use crate::tensor::{CpuTensor, CpuViewMutTensor, TensorBase};
 
 #[inline]
@@ -70,11 +71,7 @@ where
         let mut sorted_stride = self.stride.to_vec();
         sorted_stride.sort();
         sorted_stride.reverse();
-        if self.shape.is_default_stride(&Stride::new(sorted_stride)) {
-            self.ptr.to_slice()
-        } else {
-            panic!("oppai");
-        }
+        self.ptr.to_slice()
     }
 }
 
@@ -84,10 +81,6 @@ impl<E: Copy> CpuViewMutTensor<E> {
         let mut sorted_stride = self.stride.to_vec();
         sorted_stride.sort();
         sorted_stride.reverse();
-        if self.shape.is_default_stride(&Stride::new(sorted_stride)) {
-            self.ptr.to_slice_mut()
-        } else {
-            panic!("oppai");
-        }
+        self.ptr.to_slice_mut()
     }
 }
