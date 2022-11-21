@@ -146,8 +146,14 @@ pub fn slice_update_shape_stride(
     if !(shape.len() == stride.len() && shape.len() == index.len()) {
         panic!("length of shape, stride, index must be same");
     }
+    let mut skip_idx = vec![];
+    for (i, idx) in index.iter().enumerate() {
+        if idx.is_range() {
+            skip_idx.push(i);
+        }
+    }
 
-    let shape_vec = index
+    let mut shape_vec = index
         .iter()
         .enumerate()
         .map(|(idx, x)| {
@@ -159,13 +165,18 @@ pub fn slice_update_shape_stride(
             num_elm / x.step + num_elm % x.step
         })
         .collect::<Vec<isize>>();
-    let shape = Shape::new(shape_vec);
 
-    let stride_vec = index
+    let mut stride_vec = index
         .iter()
         .zip(stride.iter())
         .map(|(idx, st)| st * idx.step)
         .collect::<Vec<isize>>();
+
+    for x in skip_idx.iter() {
+        let _ = shape_vec.remove(*x);
+        let _ = stride_vec.remove(*x);
+    }
+    let shape = Shape::new(shape_vec);
     let stride = Stride::new(stride_vec);
     (shape, stride)
 }
@@ -383,8 +394,8 @@ impl_slice_update_test!(
     vec![15, 10],
     vec![10, 1],
     index![2, 2..5],
-    vec![1, 3],
-    vec![10, 1]
+    vec![3],
+    vec![1]
 );
 
 impl_slice_update_test!(

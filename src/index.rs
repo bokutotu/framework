@@ -21,6 +21,10 @@ impl Inner {
     fn is_point_single_elm(&self) -> bool {
         self.end.is_none()
     }
+
+    pub(crate) fn is_range(&self) -> bool {
+        self.end.is_none()
+    }
 }
 
 impl From<Range<isize>> for Inner {

@@ -56,13 +56,23 @@ fn to_slice_view() {
     let slice = a.to_slice();
     assert_eq!(&v, slice)
 }
-//
-// #[test]
-// fn to_slice_view_index() {
-//     use crate::index;
-//     let v = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
-//     let a = CpuTensor::from_vec(v.clone(), Shape::new(vec![3, 3]));
-//     let a = a.slice(index![..;2, ..2]);
-//     let slice = a.to_slice();
-//     assert_eq!(v[3..], *slice)
-// }
+
+#[test]
+fn index_test() {
+    use crate::index;
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+
+    let mut a = vec![];
+    for i in 0..125 {
+        a.push(i);
+    }
+    let a = CpuTensor::from_vec(a, Shape::new(vec![5, 5, 5]));
+    let a = a.slice(index![.., 2, ..]);
+    let a_vec = a.into_owned().to_vec();
+    let ans = [
+        10, 11, 12, 13, 14, 35, 36, 37, 38, 39, 60, 61, 62, 63, 64, 85, 86, 87, 88, 89, 110, 111,
+        112, 113, 114,
+    ];
+    assert_eq!(a_vec, ans);
+}

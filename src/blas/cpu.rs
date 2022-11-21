@@ -856,3 +856,14 @@ fn copy_f64_test() {
     let b = b.to_vec();
     assert_eq!(b, [0., 1., 3.]);
 }
+
+#[test]
+fn asum_f64_test_index() {
+    use crate::index;
+    use crate::shape::Shape;
+    use crate::tensor::CpuTensor;
+    let a = vec![0., 1., 2., 3., 4., 5.];
+    let a = CpuTensor::from_vec(a, Shape::new(vec![2, 3]));
+    let res = asum(a.slice(index![1, ..])).unwrap();
+    assert_eq!(res, 12.);
+}
