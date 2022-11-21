@@ -1,5 +1,4 @@
 use std::convert::TryInto;
-// use std::fmt::Debug;
 
 use crate::tensor::{CpuViewMutTensor, CpuViewTensor};
 use crate::wrapper::cpu_blas::*;

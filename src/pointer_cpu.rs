@@ -7,14 +7,14 @@ macro_rules! impl_view {
         impl<$lt: Copy> View<$view<$lt>, $owned<$lt>> for $name<$lt> {
             #[inline]
             fn access_by_offset_region(&self, offset: usize, region: usize) -> $view<$lt> {
-                if self.is_inbound((offset + region) as isize) {
+                if self.is_inbound((offset + region - 1) as isize) {
                     let offset = self.offset + offset;
                     let len = offset + region;
                     let cap = self.cap;
                     let ptr = self.ptr.clone();
                     $view::from_nonnull(ptr, offset, len, cap)
                 } else {
-                    panic!("aaa");
+                    panic!("internal error, `access_by_offset_region` out of bounds");
                 }
             }
 

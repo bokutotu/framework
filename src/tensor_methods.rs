@@ -76,6 +76,15 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
     pub fn num_elms(&self) -> usize {
         self.shape.num_elms()
     }
+
+    #[inline]
+    pub fn swap_axis(&mut self, a: usize, b: usize) {
+        if usize::max(a, b) >= self.shape.len() {
+            panic!("swap axis argument is smaller than axis length");
+        }
+        self.shape.swap(a, b);
+        self.stride.swap(a, b);
+    }
 }
 
 #[test]
@@ -93,4 +102,30 @@ fn from_vec_panic() {
     use crate::tensor::CpuTensor;
     let a = vec![1., 2., 3., 4., 5.];
     let _ = CpuTensor::from_vec(a, Shape::new(vec![1, 2, 3, 4]));
+}
+
+#[test]
+#[should_panic]
+fn swap_axis_test_panic() {
+    use crate::tensor::CpuTensor;
+    let mut v = vec![];
+    for i in 0..125 {
+        v.push(i);
+    }
+    let mut a = CpuTensor::from_vec(v, Shape::new(vec![5, 5, 5]));
+    a.swap_axis(1, 3);
+}
+
+#[test]
+fn swap_axis_test() {
+    use crate::tensor::CpuTensor;
+    let mut v = vec![];
+    for idx in 0..8 {
+        v.push(idx);
+    }
+    let mut a = CpuTensor::from_vec(v, Shape::new(vec![2, 2, 2]));
+    a.swap_axis(0, 2);
+    let a_v = a.to_view();
+    let a_v_v = a_v.into_owned().to_vec();
+    assert_eq!(a_v_v, vec![0, 4, 2, 6, 1, 5, 3, 7]);
 }

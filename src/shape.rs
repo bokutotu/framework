@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 use std::iter::Iterator;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use crate::index::TensorIndex;
 // use for tests
@@ -47,6 +47,12 @@ impl Deref for Shape {
     type Target = Vec<isize>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Shape {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -104,6 +110,12 @@ impl Deref for Stride {
     type Target = Vec<isize>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Stride {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
