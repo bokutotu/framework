@@ -26,10 +26,12 @@ impl Shape {
         Stride::new(res)
     }
 
+    #[inline]
     pub fn is_default_stride(&self, stride: &Stride) -> bool {
         self.default_stride() == *stride
     }
 
+    #[inline]
     pub fn num_elms(&self) -> usize {
         self.0.iter().product::<isize>() as usize
     }
@@ -38,8 +40,13 @@ impl Shape {
         ShapeIter::new(self.clone())
     }
 
+    #[inline]
     pub fn num_dim(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn add_axis_unchecked(&mut self, axis: usize) {
+        self.insert(axis, 1);
     }
 }
 
@@ -103,6 +110,11 @@ impl Stride {
 
     pub(crate) fn to_vec(&self) -> Vec<isize> {
         self.0.clone()
+    }
+
+    pub(crate) fn add_axis_unchecked(&mut self, axis: usize) {
+        let zero = self[0];
+        self.insert(axis, zero);
     }
 }
 

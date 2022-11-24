@@ -85,6 +85,15 @@ impl<P: TensorPointer<Elem = E>, E: Copy> TensorBase<P, E> {
         self.shape.swap(a, b);
         self.stride.swap(a, b);
     }
+
+    #[inline]
+    pub fn add_axis(&mut self, axis: usize) {
+        if axis < self.shape().num_dim() {
+            panic!("axis must be smaller than length of shape");
+        }
+        self.shape.add_axis_unchecked(axis);
+        self.stride.add_axis_unchecked(axis);
+    }
 }
 
 #[test]
