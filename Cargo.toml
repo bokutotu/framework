@@ -10,3 +10,6 @@ ndarray = "0.15.6"
 num-traits = "0.2.15"
 openblas-src = "0.10.5"
 cblas = "*"
+cublas-sys = {path = "./cublas-sys"}
+cuda-runtime-sys = {path = "./cuda-runtime-sys"}
+cudnn-sys = {path = "./cudnn-sys"}
