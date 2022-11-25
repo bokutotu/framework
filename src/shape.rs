@@ -113,8 +113,7 @@ impl Stride {
     }
 
     pub(crate) fn add_axis_unchecked(&mut self, axis: usize) {
-        let zero = self[0];
-        self.insert(axis, zero);
+        self.insert(axis, 1);
     }
 }
 
@@ -450,4 +449,63 @@ impl_slice_update_test!(
     vec![2, 1],
     index![2..3, 1..3],
     5
+);
+
+macro_rules! impl_add_axis {
+    ($fn_name:ident, $x:expr, $axis:expr, $ans:expr) => {
+        #[test]
+        fn $fn_name() {
+            let mut x = $x;
+            x.add_axis_unchecked($axis);
+            assert_eq!(x, $ans);
+        }
+    };
+}
+impl_add_axis!(
+    axis_add_shape_3d_first,
+    Shape::new(vec![3, 4, 5]),
+    0,
+    Shape::new(vec![1, 3, 4, 5])
+);
+impl_add_axis!(
+    axis_add_shape_3d_second,
+    Shape::new(vec![3, 4, 5]),
+    1,
+    Shape::new(vec![3, 1, 4, 5])
+);
+impl_add_axis!(
+    axis_add_shape_3d_third,
+    Shape::new(vec![3, 4, 5]),
+    2,
+    Shape::new(vec![3, 4, 1, 5])
+);
+impl_add_axis!(
+    axis_add_shape_3d_forth,
+    Shape::new(vec![3, 4, 5]),
+    3,
+    Shape::new(vec![3, 4, 5, 1])
+);
+impl_add_axis!(
+    axis_add_stride_3d_first,
+    Stride::new(vec![3, 4, 5]),
+    0,
+    Stride::new(vec![1, 3, 4, 5])
+);
+impl_add_axis!(
+    axis_add_stride_3d_second,
+    Stride::new(vec![3, 4, 5]),
+    1,
+    Stride::new(vec![3, 1, 4, 5])
+);
+impl_add_axis!(
+    axis_add_stride_3d_third,
+    Stride::new(vec![3, 4, 5]),
+    2,
+    Stride::new(vec![3, 4, 1, 5])
+);
+impl_add_axis!(
+    axis_add_stride_3d_forth,
+    Stride::new(vec![3, 4, 5]),
+    3,
+    Stride::new(vec![3, 4, 5, 1])
 );
