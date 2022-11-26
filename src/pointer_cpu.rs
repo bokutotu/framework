@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, Cpu, View, ViewMut};
+use crate::pointer_traits::{Cpu, Mut, Owned, TensorPointer, View, ViewMut};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
@@ -118,7 +118,7 @@ impl<E: Copy> TensorPointer for OwnedCpu<E> {
 impl<E: Copy> Owned for OwnedCpu<E> {
     type View = ViewCpu<E>;
     type ViewMut = ViewMutCpu<E>;
-    fn to_view(&self, offset: usize) -> ViewCpu<E> {
+    fn to_view(&self, offset: usize) -> Self::View {
         if self.is_inbound(offset.try_into().unwrap()) {
             ViewCpu::from_nonnull(self.ptr, offset, self.len, self.cap)
         } else {
@@ -126,7 +126,7 @@ impl<E: Copy> Owned for OwnedCpu<E> {
         }
     }
 
-    fn to_view_mut(&mut self, offset: usize) -> ViewMutCpu<E> {
+    fn to_view_mut(&mut self, offset: usize) -> Self::ViewMut {
         if self.is_inbound(offset.try_into().unwrap()) {
             ViewMutCpu::from_nonnull(self.ptr, offset, self.len, self.cap)
         } else {

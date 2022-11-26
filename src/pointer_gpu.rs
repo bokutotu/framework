@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, Cpu, View, ViewMut};
+use crate::pointer_traits::{Cpu, Mut, Owned, TensorPointer, View, ViewMut};
 
 #[repr(C)]
 pub struct OwnedGpu<E> {
