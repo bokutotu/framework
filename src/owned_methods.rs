@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use crate::index::TensorIndex;
-use crate::pointer_traits::{Owned, ToSlice};
+use crate::pointer_traits::{Owned, Cpu};
 use crate::shape::{slice_update_offset, slice_update_shape_stride};
 use crate::tensor::{CpuTensor, CpuViewMutTensor, CpuViewTensor};
 

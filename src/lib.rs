@@ -11,6 +11,7 @@ pub mod tensor;
 pub mod tensor_methods;
 pub mod view_methods;
 
+mod cuda_runtime;
 mod pointer_cpu;
 mod pointer_gpu;
 mod pointer_traits;

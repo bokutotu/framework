@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::pointer_traits::{Mut, Owned, TensorPointer, ToSlice, View, ViewMut};
+use crate::pointer_traits::{Mut, Owned, TensorPointer, Cpu, View, ViewMut};
 
 macro_rules! impl_view {
     ( $name:ident, $view:ident, $owned: ident, $lt:tt ) => {
@@ -51,7 +51,7 @@ macro_rules! impl_mut {
 
 macro_rules! impl_cpu {
     ( $name:ident, $lt:tt) => {
-        impl<$lt: Copy> ToSlice for $name<$lt> {
+        impl<$lt: Copy> Cpu for $name<$lt> {
             #[inline]
             fn to_slice<'a>(&'a self) -> &'a [<Self as TensorPointer>::Elem] {
                 unsafe { std::slice::from_raw_parts(self.as_ptr(), self.len()) }

@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use num_traits::Num;
 
 use crate::pointer_cpu::{OwnedCpu, ViewCpu};
-use crate::pointer_traits::{Mut, TensorPointer, ToSlice, View};
+use crate::pointer_traits::{Mut, TensorPointer, Cpu, View};
 use crate::shape::cal_offset;
 use crate::tensor::{CpuTensor, CpuViewMutTensor, TensorBase};
 
@@ -40,7 +40,7 @@ where
 
 impl<P: TensorPointer<Elem = E>, E> TensorBase<P, E>
 where
-    P: TensorPointer<Elem = E> + ToSlice + View<ViewCpu<E>, OwnedCpu<E>>,
+    P: TensorPointer<Elem = E> + Cpu + View<ViewCpu<E>, OwnedCpu<E>>,
     E: Copy + Num + Debug,
 {
     #[inline]

@@ -58,6 +58,6 @@ pub trait View<V: View<V, O>, O: Owned>: TensorPointer {
 pub trait ViewMut<V: View<V, O>, O: Owned>: View<V, O> + Mut {}
 
 /// Impl to Cpu Pointer only
-pub trait ToSlice: TensorPointer {
+pub trait Cpu: TensorPointer {
     fn to_slice(&'_ self) -> &'_ [<Self as TensorPointer>::Elem];
 }

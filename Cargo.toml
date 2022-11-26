@@ -13,3 +13,5 @@ cblas = "*"
 cublas-sys = {path = "./cublas-sys"}
 cuda-runtime-sys = {path = "./cuda-runtime-sys"}
 cudnn-sys = {path = "./cudnn-sys"}
+cutensor-sys = {path = "./cutensor-sys"}
+thiserror = "1.0.37"
